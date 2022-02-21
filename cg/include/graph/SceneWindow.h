@@ -28,13 +28,16 @@
 // Class definition for generic graph scene window.
 //
 // Author: Paulo Pagliosa
-// Last revision: 26/02/2022
+// Modified by: Felipe Machado
+// Last revision: 17/03/2022
 
 #ifndef __GraphSceneWindow_h
 #define __GraphSceneWindow_h
 
 #include "graph/SceneObjectBuilder.h"
 #include "graphics/SceneWindowBase.h"
+#include "graphics/GLTextureFramebuffer.h"
+#include "graphics/GLWindow.h"
 #include <typeinfo>
 #include <unordered_map>
 

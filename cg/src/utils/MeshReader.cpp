@@ -28,10 +28,17 @@
 // Source file for OBJ mesh reader.
 //
 // Author: Paulo Pagliosa
-// Last revision: 10/02/2022
+// Modified by: Felipe Machado
+// Last revision: 17/03/2022
 
 #include "utils/MeshReader.h"
+#include <cstring>
 #include <filesystem>
+#include <fstream>
+#include <sstream>
+#include <string>
+
+#define OnFailClear() if (in.fail()) { in.clear(); return false; }
 
 namespace cg
 { // begin namespace cg
@@ -39,20 +46,47 @@ namespace cg
 namespace internal
 { // begin namespace internal
 
+bool
+readInt2(std::istream& in, int skip, int &a, int &b)
+{
+  in >> a;
+  OnFailClear();
+  in.seekg(skip, std::ios::cur);
+  in >> b;
+  OnFailClear();
+
+  return true;
+}
+
+bool
+readInt3(std::istream& in, int skip, int &a, int &b, int &c)
+{
+  in >> a;
+  OnFailClear();
+  in.seekg(skip, std::ios::cur);
+  in >> b;
+  OnFailClear();
+  in.seekg(skip, std::ios::cur);
+  in >> c;
+  OnFailClear();
+
+  return true;
+}
+
 void
-readMeshSize(FILE* file, TriangleMesh::Data& data)
+readMeshSize(std::fstream& file, TriangleMesh::Data& data)
 {
   constexpr auto lineSize = 128;
   int nv{};
   int nt{};
 
-  for (char line[lineSize]; fscanf_s(file, "%s", line, lineSize) != EOF;)
+  for (std::string line; file >> line;)
     switch (line[0])
     {
       case 'v':
-        if (line[1] == '\0')
+        if (line.c_str()[1] == '\0')
             nv++;
-        fgets(line, lineSize, file);
+        std::getline(file, line);
         break;
 
       case 'f':
@@ -61,63 +95,67 @@ readMeshSize(FILE* file, TriangleMesh::Data& data)
         int n;
         int t;
 
-        fscanf_s(file, "%s", line, lineSize);
+        file >> line;
+        std::stringstream ss (line);
+        
         /* can be one of %d, %d//%d, %d/%d, %d/%d/%d %d//%d */
-        if (strstr(line, "//"))
+        if (strstr(line.c_str(), "//"))
         {
           /* v//n */
-          sscanf_s(line, "%d//%d", &v, &n);
-          fscanf_s(file, "%d//%d", &v, &n);
-          fscanf_s(file, "%d//%d", &v, &n);
+          readInt2(ss, 2, v, n);
+          readInt2(file, 2, v, n);
+          readInt2(file, 2, v, n);
           nt++;
-          while (fscanf_s(file, "%d//%d", &v, &n) > 0)
+          while (readInt2(file, 2, v, n))
             nt++;
         }
-        else if (sscanf_s(line, "%d/%d/%d", &v, &t, &n) == 3)
+        else if (readInt3(ss, 1, v, t, n))
         {
           /* v/t/n */
-          fscanf_s(file, "%d/%d/%d", &v, &t, &n);
-          fscanf_s(file, "%d/%d/%d", &v, &t, &n);
+          readInt3(file, 1, v, t, n);
+          readInt3(file, 1, v, t, n);
           nt++;
-          while (fscanf_s(file, "%d/%d/%d", &v, &t, &n) > 0)
+          while (readInt3(file, 1, v, t, n))
             nt++;
         }
-        else if (sscanf_s(line, "%d/%d", &v, &t) == 2)
+        else if (readInt2(ss, 1, v, t))
         {
           /* v/t */
-          fscanf_s(file, "%d/%d", &v, &t);
-          fscanf_s(file, "%d/%d", &v, &t);
+          readInt2(file, 1, v, t);
+          readInt2(file, 1, v, t);
           nt++;
-          while (fscanf_s(file, "%d/%d", &v, &t) > 0)
+          while (readInt2(file, 1, v, t))
             nt++;
         }
         else
         {
           /* v */
-          fscanf_s(file, "%d", &v);
-          fscanf_s(file, "%d", &v);
+          file >> v;
+          file >> v;
           nt++;
-          while (fscanf_s(file, "%d", &v) > 0)
+          while (file >> v)
             nt++;
         }
         break;
       }
 
       default:
-        fgets(line, lineSize, file);
+        std::getline(file, line);
     }
   data.vertexCount = nv;
   data.triangleCount = nt;
+
+  if (file.fail()) file.clear();
 }
 
 void
-readMeshData(FILE* file, TriangleMesh::Data& data)
+readMeshData(std::fstream& file, TriangleMesh::Data& data)
 {
   constexpr auto lineSize = 128;
   auto vertex = data.vertices;
   auto triangle = data.triangles;
 
-  for (char line[lineSize]; fscanf_s(file, "%s", line, lineSize) != EOF;)
+  for (std::string line; file >> line;)
     switch (line[0])
     {
       case 'v':
@@ -129,13 +167,13 @@ readMeshData(FILE* file, TriangleMesh::Data& data)
         switch (line[1])
         {
           case '\0':
-            fscanf_s(file, "%f %f %f", &x, &y, &z);
+            file >> x >> y >> z;
             vertex->set(x, y, z);
             vertex++;
             break;
 
           default:
-            fgets(line, lineSize, file);
+            std::getline(file, line);
         }
         break;
       }
@@ -146,19 +184,21 @@ readMeshData(FILE* file, TriangleMesh::Data& data)
         int n;
         int t;
 
-        fscanf_s(file, "%s", line, lineSize);
+        file >> line;
+        std::stringstream ss (line);
+
         /* Can be one of %d, %d//%d, %d/%d, %d/%d/%d %d//%d */
-        if (strstr(line, "//"))
+        if (strstr(line.c_str(), "//"))
         {
           /* v//n */
-          sscanf_s(line, "%d//%d", &v, &n);
+          readInt2(ss, 2, v, n);
           triangle->v[0] = v - 1;
-          fscanf_s(file, "%d//%d", &v, &n);
+          readInt2(file, 2, v, n);
           triangle->v[1] = v - 1;
-          fscanf_s(file, "%d//%d", &v, &n);
+          readInt2(file, 2, v, n);
           triangle->v[2] = v - 1;
           triangle++;
-          while (fscanf_s(file, "%d//%d", &v, &n) > 0)
+          while (readInt2(file, 2, v, n))
           {
             triangle->v[0] = triangle[-1].v[0];
             triangle->v[1] = triangle[-1].v[2];
@@ -166,16 +206,16 @@ readMeshData(FILE* file, TriangleMesh::Data& data)
             triangle++;
           }
         }
-        else if (sscanf_s(line, "%d/%d/%d", &v, &t, &n) == 3)
+        else if (readInt3(ss, 1, v, t, n))
         {
           /* v/t/n */
           triangle->v[0] = v - 1;
-          fscanf_s(file, "%d/%d/%d", &v, &t, &n);
+          readInt3(file, 1, v, t, n);
           triangle->v[1] = v - 1;
-          fscanf_s(file, "%d/%d/%d", &v, &t, &n);
+          readInt3(file, 1, v, t, n);
           triangle->v[2] = v - 1;
           triangle++;
-          while (fscanf_s(file, "%d/%d/%d", &v, &t, &n) > 0)
+          while (readInt3(file, 1, v, t, n) > 0)
           {
             triangle->v[0] = triangle[-1].v[0];
             triangle->v[1] = triangle[-1].v[2];
@@ -183,16 +223,16 @@ readMeshData(FILE* file, TriangleMesh::Data& data)
             triangle++;
           }
         }
-        else if (sscanf_s(line, "%d/%d", &v, &t) == 2)
+        else if (readInt2(ss, 1, v, t))
         {
           /* v/t */
           triangle->v[0] = v - 1;
-          fscanf_s(file, "%d/%d", &v, &t);
+          readInt2(file, 1, v, t);
           triangle->v[1] = v - 1;
-          fscanf_s(file, "%d/%d", &v, &t);
+          readInt2(file, 1, v, t);
           triangle->v[2] = v - 1;
           triangle++;
-          while (fscanf_s(file, "%d/%d", &v, &t) > 0)
+          while (readInt2(file, 1, v, t))
           {
             triangle->v[0] = triangle[-1].v[0];
             triangle->v[1] = triangle[-1].v[2];
@@ -203,14 +243,14 @@ readMeshData(FILE* file, TriangleMesh::Data& data)
         else
         {
           /* v */
-          sscanf_s(line, "%d", &v);
+          ss >> v;
           triangle->v[0] = v - 1;
-          fscanf_s(file, "%d", &v);
+          file >> v;
           triangle->v[1] = v - 1;
-          fscanf_s(file, "%d", &v);
+          file >> v;
           triangle->v[2] = v - 1;
           triangle++;
-          while (fscanf_s(file, "%d", &v) > 0)
+          while (file >> v)
           {
             triangle->v[0] = triangle[-1].v[0];
             triangle->v[1] = triangle[-1].v[2];
@@ -222,8 +262,9 @@ readMeshData(FILE* file, TriangleMesh::Data& data)
       }
 
       default:
-        fgets(line, lineSize, file);
+        std::getline(file, line);
     }
+  if (file.fail()) file.clear();
 }
 
 } // end namespace internal
@@ -236,10 +277,9 @@ readMeshData(FILE* file, TriangleMesh::Data& data)
 TriangleMesh*
 MeshReader::readOBJ(const char* filename)
 {
-  FILE* file;
+  std::fstream file (filename, std::ios::in);
 
-  fopen_s(&file, filename, "r");
-  if (file == nullptr)
+  if (!file)
     return nullptr;
 
   TriangleMesh::Data data;
@@ -248,10 +288,9 @@ MeshReader::readOBJ(const char* filename)
   data.vertices = new vec3f[data.vertexCount];
   data.vertexNormals = nullptr;
   data.triangles = new TriangleMesh::Triangle[data.triangleCount];
-  rewind(file);
+  file.seekg(std::ios::beg);
   printf("Reading Wavefront OBJ file %s...\n", filename);
   internal::readMeshData(file, data);
-  fclose(file);
 
   auto mesh = new TriangleMesh{std::move(data)};
 

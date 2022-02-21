@@ -28,7 +28,8 @@
 //  Source file for generic error handler.
 //
 // Author: Paulo Pagliosa
-// Last revision: 07/02/2022
+// Modified by: Felipe Machado
+// Last revision: 17/03/2022
 
 #include "ErrorHandler.h"
 #include <cstdio>
@@ -65,7 +66,7 @@ ErrorHandler::findErrorMessage(int) const
 void
 ErrorHandler::throwErrorMessage(const char* msg) const
 {
-  throw std::exception(msg);
+  throw std::runtime_error(msg);
 }
 
 void

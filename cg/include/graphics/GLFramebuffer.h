@@ -28,7 +28,8 @@
 // Class definition for OpenGL FBO.
 //
 // Author: Paulo Pagliosa
-// Last revision: 31/01/2022
+// Modified by: Felipe Machado
+// Last revision: 17/03/2022
 
 #ifndef __GLFramebuffer_h
 #define __GLFramebuffer_h
@@ -195,6 +196,8 @@ public:
 
 #define READ(type) (T*)ReadBufferBase::read(index, x, y, w, h, format, type)
 
+// TODO Adapt this code to standard C++
+#ifdef _MSC_VER
   const T* read(int index, int x, int y, int w, int h, GLenum format)
   {
     if constexpr (std::is_same_v<T, char>)
@@ -217,6 +220,7 @@ public:
       return nullptr;
     }
   }
+#endif
 
 #undef READ
 

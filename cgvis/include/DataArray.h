@@ -28,7 +28,8 @@
 // Class definition for generic vis data array.
 //
 // Author: Paulo Pagliosa
-// Last revision: 14/03/2022
+// Modified by: Felipe Machado
+// Last revision: 17/03/2022
 
 #ifndef __DataArray_h
 #define __DataArray_h
@@ -107,7 +108,7 @@ DataArray<T>::set(int i, const T& value)
     _data.push_back(value);
   else
   {
-    _data.resize((size_t)i + 1);
+    _data.resize((std::size_t)i + 1);
     _data[i] = value;
   }
   _computeTime.reset();

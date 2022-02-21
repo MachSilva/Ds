@@ -28,7 +28,8 @@
 // Source file for mesh sweeper.
 //
 // Author: Paulo Pagliosa
-// Last revision: 11/03/2022
+// Modified by: Felipe Machado
+// Last revision: 17/03/2022
 
 #include "geometry/MeshSweeper.h"
 #include <vector>
@@ -127,8 +128,8 @@ MeshSweeper::makeCone(int ns)
   data.triangles = new TriangleMesh::Triangle[nt];
 
   const auto a = 2 * math::pi<float>() / ns;
-  const auto c = cos(a);
-  const auto s = sin(a);
+  const auto c = std::cos(a);
+  const auto s = std::sin(a);
   const auto t = ns + 1;
   auto x = 1.0f;
   auto z = 0.0f;
@@ -264,14 +265,14 @@ MeshSweeper::makeSphere(int ns)
 
     for (int p = 0; p <= nl; ++p, pAngle -= pStep)
     {
-      auto t = cos(pAngle);
-      auto y = sin(pAngle);
+      auto t = std::cos(pAngle);
+      auto y = std::sin(pAngle);
       auto v = 1 - (float)p / nl;
       auto mAngle = 0.0f;
 
       for (int m = 0; m <= ns; ++m, mAngle += mStep)
       {
-        *vertex++ = *normal++ = {t * cos(mAngle), y, t * sin(mAngle)};
+        *vertex++ = *normal++ = {t * std::cos(mAngle), y, t * std::sin(mAngle)};
         *uv++ = {1 - (float)m / ns, v};
       }
     }

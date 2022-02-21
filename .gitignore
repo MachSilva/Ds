@@ -1,5 +1,11 @@
 # Add any directories, files, or patterns you don't want to be tracked by version control
+.idea/
 .vs/
+.vscode/
+# CLion uses cmake-build-debug by default for CMake.
+cmake-build*/
+# MSVC uses out/ as build directory for CMake.
+out/
 x64/
 *.ilk
 *.pdb

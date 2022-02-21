@@ -28,7 +28,8 @@
 // Source file for OpenGL 2D graphics.
 //
 // Author: Paulo Pagliosa
-// Last revision: 16/02/2019
+// Modified by: Felipe Machado
+// Last revision: 17/03/2022
 
 #include "graphics/GLGraphics2.h"
 
@@ -164,8 +165,8 @@ GLGraphics2::drawCircumference(const vec2f& center, float radius)
     return;
 
   const int ns{20};
-  float c{cos(2 * math::pi<float>() / ns)};
-  float s{sin(2 * math::pi<float>() / ns)};
+  float c{std::cos(2 * math::pi<float>() / ns)};
+  float s{std::sin(2 * math::pi<float>() / ns)};
   vec2f r{0, radius};
   vec4f p[2];
 

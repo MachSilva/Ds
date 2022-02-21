@@ -28,7 +28,8 @@
 // Class definition for quaternion.
 //
 // Author: Paulo Pagliosa
-// Last revision: 29/05/2020
+// Modified by: Felipe Machado
+// Last revision: 17/03/2022
 
 #ifndef __Quaternion_h
 #define __Quaternion_h
@@ -70,7 +71,7 @@ HOST DEVICE
 inline Vector3<real>
 cos3(const Vector3<real>& v)
 {
-  return Vector3<real>{cos(v.x), cos(v.y), cos(v.z)};
+  return Vector3<real>{std::cos(v.x), std::cos(v.y), std::cos(v.z)};
 }
 
 template <typename real>
@@ -78,7 +79,7 @@ HOST DEVICE
 inline Vector3<real>
 sin3(const Vector3<real>& v)
 {
-  return Vector3<real>{sin(v.x), sin(v.y), sin(v.z)};
+  return Vector3<real>{std::sin(v.x), std::sin(v.y), std::sin(v.z)};
 }
 
 

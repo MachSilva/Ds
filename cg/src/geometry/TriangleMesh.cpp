@@ -28,9 +28,11 @@
 // Source file for simple triangle mesh.
 //
 // Author: Paulo Pagliosa
-// Last revision: 11/03/2022
+// Modified by: Felipe Machado
+// Last revision: 17/03/2022
 
 #include "geometry/MeshSweeper.h"
+#include <cstring>
 #include <memory>
 
 namespace cg
