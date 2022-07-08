@@ -17,3 +17,9 @@ add_executable(cgdemo
 )
 
 target_link_libraries(cgdemo cg)
+
+# Symlink assets directory
+execute_process(
+    COMMAND ${CMAKE_COMMAND} -E create_symlink 
+        ${CMAKE_CURRENT_LIST_DIR}/assets ${CMAKE_CURRENT_BINARY_DIR}/assets
+)

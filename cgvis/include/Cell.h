@@ -28,7 +28,8 @@
 // Class definition for generic vis cell.
 //
 // Author: Paulo Pagliosa
-// Last revision: 11/03/2022
+// Modified by: Felipe Machado
+// Last revision: 08/07/2022
 
 #ifndef __Cell_h
 #define __Cell_h
@@ -48,7 +49,7 @@ template <typename DataSet, int32_t nv>
 class Cell: public virtual SharedObject
 {
 public:
-  constexpr auto vertexCount() const
+  auto vertexCount() const
   {
     return nv;
   }

@@ -2,14 +2,14 @@ cmake_minimum_required(VERSION 3.16)
 
 option(USE_CUDA "Build projects with CUDA support" OFF)
 
-set(GPGPU_LANGUAGES CXX)
-if (${USE_CUDA})
-  set(GPGPU_LANGUAGES ${GPGPU_LANGUAGES} CUDA)
+set(DS_LANGUAGES CXX)
+if(${USE_CUDA})
+  set(DS_LANGUAGES ${DS_LANGUAGES} CUDA)
 endif()
 
 message(STATUS "CUDA support: " ${USE_CUDA})
 
-project(gpgpu VERSION 1.0 LANGUAGES ${GPGPU_LANGUAGES})
+project(Ds VERSION 1.1 LANGUAGES ${DS_LANGUAGES})
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
