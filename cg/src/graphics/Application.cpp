@@ -28,7 +28,8 @@
 // Source file for graphics application.
 //
 // Author: Paulo Pagliosa
-// Last revision: 16/03/2022
+// Modified by: Felipe Machado
+// Last revision: 12/07/2022
 
 #include "graphics/Application.h"
 #include <cstdarg>
@@ -47,7 +48,12 @@ static int glfwInitialized;
 static void
 errorCallback(int error, const char* description)
 {
-  Application::error("GLFW (%d): %s", error, description);
+  // GLFW errors are NEVER fatal as guaranteed by GLFW's documentation.
+  // The library is still in a valid state.
+  // See:
+  // - https://github.com/glfw/glfw/issues/1121
+  // - https://www.glfw.org/docs/latest/intro_guide.html#error_handling
+  printf("[GLFW 0x%x] %s\n", error, description);
 }
 
 inline auto
