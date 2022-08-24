@@ -29,7 +29,7 @@
 //
 // Author: Paulo Pagliosa
 // Modified by: Felipe Machado
-// Last revision: 17/03/2022
+// Last revision: 12/07/2022
 
 #ifndef __GraphSceneWindow_h
 #define __GraphSceneWindow_h
@@ -86,6 +86,8 @@ protected:
     registerInspectFunction<LightProxy>(inspectLight);
     registerInspectFunction<TriangleMeshProxy>(inspectPrimitive);
   }
+
+  SceneNode* currentNode() { return &_currentNode; }
 
   void setScene(Scene&);
 

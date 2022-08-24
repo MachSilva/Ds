@@ -28,14 +28,15 @@
 // Source file for OpenGL renderer.
 //
 // Author: Paulo Pagliosa
-// Last revision: 01/03/2022
+// Modified by: Felipe Machado
+// Last revision: 12/07/2022
 
 #include "graphics/GLRenderer.h"
 
 namespace cg
 { // begin namespace cg
 
-#define STRINGIFY(A) "#version 400\n"#A
+#define STRINGIFY(A) "#version 430\n"#A
 
 
 /////////////////////////////////////////////////////////////////////
@@ -117,10 +118,10 @@ static const char* geometryShader = STRINGIFY(
 static const char* fragmentShader = STRINGIFY(
   struct LightProps
   {
-    int type; // DIRECTIONAL/POINT/SPOT
     vec4 color; // color
     vec3 position; // VRC position
     vec3 direction; // VRC direction
+    int type; // DIRECTIONAL/POINT/SPOT
     int falloff; // CONSTANT/LINEAR/QUADRATIC
     float range; // range (== 0 INFINITE)
     float angle; // spot angle
@@ -150,12 +151,17 @@ static const char* fragmentShader = STRINGIFY(
   //uniform vec4 backFaceColor = vec4(1, 0, 1, 1);
   uniform int projectionType; // PERSPECTIVE/PARALLEL
   uniform vec4 ambientLight;
-  uniform int lightCount;
-  uniform LightProps lights[8];
   uniform MaterialProps material;
   uniform LineProps line;
   subroutine uniform mixColorType mixColor;
   subroutine uniform matPropsType matProps;
+
+  layout(binding = 0, std140, shared) uniform LightingBlock
+  {
+    LightProps lights[8];
+    int lightCount;
+  };
+
   layout(location = 0) out vec4 fragmentColor;
 
   subroutine(matPropsType)
@@ -293,17 +299,6 @@ static const char* fragmentShader = STRINGIFY(
 
 struct GLRenderer::GLData
 {
-  struct LightPropLoc
-  {
-    GLint type;
-    GLint color;
-    GLint position;
-    GLint direction;
-    GLint falloff;
-    GLint range;
-    GLint angle;
-  };
-
   GLSL::Program program;
   mat4f viewportMatrix;
   GLint mvMatrixLoc;
@@ -312,8 +307,6 @@ struct GLRenderer::GLData
   GLint viewportMatrixLoc;
   GLint projectionTypeLoc;
   GLint ambientLightLoc;
-  GLint lightCountLoc;
-  LightPropLoc lightLocs[maxLights];
   GLint OaLoc;
   GLint OdLoc;
   GLint OsLoc;
@@ -325,35 +318,20 @@ struct GLRenderer::GLData
   GLuint modelMaterialIdx;
   GLuint colorMapMaterialIdx;
 
-  GLData();
-
-  GLint uniformLightLocation(int i, const char* field)
+  struct
   {
-    constexpr auto maxName = 32;
-    char name[maxName];
+    GLuint defaultLightingBlock;
+  } buffers;
+  static constexpr auto bufferCount = sizeof (buffers) / sizeof(GLuint);
 
-    snprintf(name, maxName, "lights[%d].%s", i, field);
-    return program.uniformLocation(name);
-  }
+  GLData();
+  ~GLData();
 
-  void uniformLightLocations(int);
   void uniformLocations();
   void subroutineIndices();
   void renderDefaultLights();
 
 }; // GLRenderer::GLData
-
-inline void
-GLRenderer::GLData::uniformLightLocations(int i)
-{
-  lightLocs[i].type = uniformLightLocation(i, "type");
-  lightLocs[i].color = uniformLightLocation(i, "color");
-  lightLocs[i].position = uniformLightLocation(i, "position");
-  lightLocs[i].direction = uniformLightLocation(i, "direction");
-  lightLocs[i].falloff = uniformLightLocation(i, "falloff");
-  lightLocs[i].range = uniformLightLocation(i, "range");
-  lightLocs[i].angle = uniformLightLocation(i, "angle");
-}
 
 inline void
 GLRenderer::GLData::uniformLocations()
@@ -364,9 +342,6 @@ GLRenderer::GLData::uniformLocations()
   viewportMatrixLoc = program.uniformLocation("viewportMatrix");
   projectionTypeLoc = program.uniformLocation("projectionType");
   ambientLightLoc = program.uniformLocation("ambientLight");
-  lightCountLoc = program.uniformLocation("lightCount");
-  for (auto i = 0; i < maxLights; ++i)
-    uniformLightLocations(i);
   OaLoc = program.uniformLocation("material.Oa");
   OdLoc = program.uniformLocation("material.Od");
   OsLoc = program.uniformLocation("material.Os");
@@ -387,11 +362,7 @@ GLRenderer::GLData::subroutineIndices()
 inline void
 GLRenderer::GLData::renderDefaultLights()
 {
-  program.setUniform(lightLocs[0].type, 1); // POINT
-  program.setUniformVec4(lightLocs[0].color, vec4f{1, 1, 1, 0});
-  program.setUniformVec3(lightLocs[0].position, vec3f{0, 0, 0});
-  program.setUniform(lightLocs[0].range, 0.0f);
-  program.setUniform(lightCountLoc, 1);
+  glBindBufferBase(GL_UNIFORM_BUFFER, 0, buffers.defaultLightingBlock);
 }
 
 inline
@@ -404,11 +375,34 @@ GLRenderer::GLData::GLData():
   program.use();
   uniformLocations();
   subroutineIndices();
+
+  GLSL::LightingBlock b;
+
+  b.lights[0].type = 1; // POINT
+  b.lights[0].color = vec4f{1, 1, 1, 0};
+  b.lights[0].position = vec3f{0, 0, 0};
+  b.lights[0].range = 0.0f;
+  b.lightCount = 1;
+
+  glCreateBuffers(bufferCount, (GLuint*) &buffers);
+  glNamedBufferStorage(
+    buffers.defaultLightingBlock,
+    sizeof (GLSL::LightingBlock),
+    (void*) &b,
+    0 // Immutable buffer storage
+  );
+}
+
+inline
+GLRenderer::GLData::~GLData()
+{
+  glDeleteBuffers(bufferCount, (GLuint*) &buffers);
 }
 
 GLRenderer::GLRenderer(SceneBase& scene, Camera& camera):
   GLRendererBase{scene, camera},
-  _gl{new GLData{}}
+  _gl{new GLData{}},
+  _lightingBlock{new GLBuffer<GLSL::LightingBlock>(1, GL_UNIFORM_BUFFER)}
 {
   // do nothing
 }
@@ -459,6 +453,8 @@ GLRenderer::renderLights()
     return;
   }
 
+  auto block = static_cast<GLSL::LightingBlock*>(glMapNamedBuffer(*_lightingBlock, GL_WRITE_ONLY));
+
   const auto& vm = _camera->worldToCameraMatrix();
   int nl{0};
 
@@ -466,23 +462,26 @@ GLRenderer::renderLights()
   {
     if (!light->isTurnedOn())
       continue;
-    _gl->program.setUniform(_gl->lightLocs[nl].type, (int)light->type());
-    _gl->program.setUniformVec4(_gl->lightLocs[nl].color, light->color);
+    block->lights[nl].type = (int)light->type();
+    block->lights[nl].color = light->color;
     {
       const auto p = vm.transform3x4(light->position());
-      _gl->program.setUniformVec3(_gl->lightLocs[nl].position, p);
+      block->lights[nl].position = p;
     }
     {
       const auto d = vm.transformVector(light->direction()).versor();
-      _gl->program.setUniformVec3(_gl->lightLocs[nl].direction, d);
+      block->lights[nl].direction = d;
     }
-    _gl->program.setUniform(_gl->lightLocs[nl].falloff, (int)light->falloff);
-    _gl->program.setUniform(_gl->lightLocs[nl].range, light->range());
-    _gl->program.setUniform(_gl->lightLocs[nl].angle, light->spotAngle());
-    if (++nl == maxLights)
+    block->lights[nl].falloff = (int)light->falloff;
+    block->lights[nl].range = light->range();
+    block->lights[nl].angle = light->spotAngle();
+    if (++nl == GLSL::LightingBlock::MAX_LIGHTS)
       break;
   }
-  _gl->program.setUniform(_gl->lightCountLoc, nl);
+  block->lightCount = nl;
+
+  glUnmapNamedBuffer(*_lightingBlock);
+  glBindBufferBase(GL_UNIFORM_BUFFER, 0, GLuint(*_lightingBlock));
 }
 
 void
