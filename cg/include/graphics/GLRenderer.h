@@ -29,7 +29,7 @@
 //
 // Author: Paulo Pagliosa
 // Modified by: Felipe Machado
-// Last revision: 12/07/2022
+// Last revision: 16/09/2022
 
 #ifndef __GLRenderer_h
 #define __GLRenderer_h
@@ -37,13 +37,38 @@
 #include "graphics/GLGraphics3.h"
 #include "graphics/GLRendererBase.h"
 
+#include <sstream>
+
 namespace cg
 { // begin namespace cg
 
 namespace GLSL
 {
 
-// Note: keep in sync with the LightProps used in the shaders
+struct alignas(16) mat3
+{
+  vec3f x;
+  float _x;
+  vec3f y;
+  float _y;
+  vec3f z;
+  float _z;
+
+  mat3() = default;
+  mat3(mat3&&) = default;
+  mat3(const mat3&) = default;
+
+  mat3(const mat3f& m) { x = m[0]; y = m[1]; z = m[2]; }
+  operator mat3f () const { return mat3f(x, y, z); }
+
+  mat3& operator = (mat3&&) = default;
+  mat3& operator = (const mat3&) = default;
+};
+
+// IMPORTANT: KEEP the data structures defined here in SYNC with the ones used in the shaders.
+// Also, do not forget to use std140 layout and align the fields within 16 bytes.
+// Prefer declaring fields with bigger storage needs earlier. (mat4 > mat3 > vec4 > vec3 > int)
+
 struct alignas(16) LightProps
 {
   vec4f color; // color
@@ -55,15 +80,110 @@ struct alignas(16) LightProps
   float angle; // spot angle
 };
 
+struct alignas(16) MaterialProps
+{
+  vec4f Oa; // ambient color
+  vec4f Od; // diffuse color
+  vec4f Os; // specular spot color
+  float shine; // specular shininess exponent
+};
+
+struct alignas(16) LineProps
+{
+  vec4f color;
+  float width;
+};
 
 struct LightingBlock
 {
   static constexpr auto MAX_LIGHTS = 8U;
 
   LightProps lights[MAX_LIGHTS];
+  alignas(16) vec4f ambientLight;
   int lightCount;
 };
-  
+
+struct MatrixBlock
+{
+  mat4f viewportMatrix;
+  mat4f mvMatrix;
+  mat4f mvpMatrix;
+  mat3 normalMatrix;
+};
+
+struct ConfigBlock
+{
+  MaterialProps material;
+  LineProps line;
+  int projectionType; // PERSPECTIVE/PARALLEL
+};
+
+enum BindingLocations
+{
+  LightingBlockBindingLoc = 0,
+  MatrixBlockBindingLoc = 1,
+  ConfigBlockBindingLoc = 2
+};
+
+extern const char* VERSION;
+extern const char* PROPS_DECLARATIONS;
+extern const char* LIGHTING_BLOCK_DECLARATION;
+extern const char* MATRIX_BLOCK_DECLARATION;
+extern const char* CONFIG_BLOCK_DECLARATION;
+
+class ShaderProgram : public SharedObject
+{
+public:
+  ShaderProgram() = default;
+
+  ShaderProgram(GLuint stage, const char* source) : ShaderProgram(stage, 1, &source) {}
+
+  ShaderProgram(GLuint stage, uint32_t count, const char* const sources[])
+    : _stage{stage}
+  {
+    _handle = glCreateShaderProgramv(stage, count, sources);
+    glGetProgramiv(_handle, GL_LINK_STATUS, &_link);
+  }
+
+  ShaderProgram(GLuint stage, std::initializer_list<const char*> sources)
+    : ShaderProgram(stage, sources.size(), sources.begin()) {}
+
+  ShaderProgram(const ShaderProgram&) = delete;
+  ShaderProgram& operator = (const ShaderProgram&) = delete;
+
+  // ShaderProgram(ShaderProgram&&);
+  // ShaderProgram& operator = (ShaderProgram&&);
+
+  ~ShaderProgram();
+
+  GLuint stage() const { return _stage; }
+  operator GLuint () const { return _handle; }
+  operator bool () const { return ok(); }
+  bool ok() const { return _handle != 0 && _link == GL_TRUE; }
+
+  GLuint subroutineIndex(const char* name) const
+  {
+    return glGetSubroutineIndex(_handle, _stage, name);
+  }
+
+  std::string infoLog() const
+  {
+    std::string log;
+    GLint length;
+    glGetProgramiv(_handle, GL_INFO_LOG_LENGTH, &length);
+    
+    log.resize(length);
+    glGetProgramInfoLog(_handle, log.size(), &length, log.data());
+
+    return log;
+  }
+
+private:
+  GLuint _stage = 0;
+  GLuint _handle = 0;
+  GLint _link = 0;
+};
+
 } // namespace GLSL
 
 //////////////////////////////////////////////////////////
@@ -82,32 +202,27 @@ public:
   /// Destructor.
   ~GLRenderer();
 
+  using GLGraphics3::drawAxes;
+  
   void update();
   void render();
-
-  using GLGraphics3::drawAxes;
-
   bool drawMesh(const Primitive& primitive) final;
+  float pixelsLength(float d) const;
   void renderMaterial(const Material& material) final;
+  void setBasePoint(const vec3f& p);
 
   void setRenderFunction(RenderFunction f)
   {
     _renderFunction = f;
   }
 
-  void setBasePoint(const vec3f& p);
-
-  float pixelsLength(float d) const;
-
-  GLBuffer<GLSL::LightingBlock>& lightingBlock() { return *_lightingBlock; }
+  GLBuffer<GLSL::LightingBlock>& lightingBlock() { return *_gl.lightingBlock; }
 
 protected:
   RenderFunction _renderFunction{};
   vec3f _basePoint;
   float _basePointZ;
   float _windowViewportRatio;
-
-  Reference<GLBuffer<GLSL::LightingBlock>> _lightingBlock;
 
   virtual void beginRender();
   virtual void endRender();
@@ -116,10 +231,24 @@ protected:
 
   void drawAxes(const mat4f&, float);
 
-private:
-  struct GLData;
+  void renderDefaultLights();
 
-  GLData* _gl;
+  struct GLData
+  {
+    GLuint pipeline; // Default pipeline
+    Reference<GLSL::ShaderProgram> vertex, geometry, fragment;
+
+    Reference<GLBuffer<GLSL::LightingBlock>> lightingBlock;
+    Reference<GLBuffer<GLSL::MatrixBlock>> matrixBlock;
+    Reference<GLBuffer<GLSL::ConfigBlock>> configBlock;
+
+    mat4f viewportMatrix;
+
+    GLuint noMixIdx;
+    GLuint lineColorMixIdx;
+    GLuint modelMaterialIdx;
+    GLuint colorMapMaterialIdx;
+  } _gl;
 
 }; // GLRenderer
 

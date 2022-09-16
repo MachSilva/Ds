@@ -29,30 +29,93 @@
 //
 // Author: Paulo Pagliosa
 // Modified by: Felipe Machado
-// Last revision: 12/07/2022
+// Last revision: 16/09/2022
 
 #include "graphics/GLRenderer.h"
+
+#define STRINGIFY(A) #A
 
 namespace cg
 { // begin namespace cg
 
-#define STRINGIFY(A) "#version 430\n"#A
+namespace GLSL
+{
 
+ShaderProgram::~ShaderProgram()
+{
+  // virtual destructor
+}
 
-/////////////////////////////////////////////////////////////////////
-//
-// GLRenderer implementation
-// ==========
+const char* VERSION = "#version 430 core\n";
+
+const char* PROPS_DECLARATIONS = STRINGIFY(
+  struct LightProps
+  {
+    vec4 color; // color
+    vec3 position; // VRC position
+    vec3 direction; // VRC direction
+    int type; // DIRECTIONAL/POINT/SPOT
+    int falloff; // CONSTANT/LINEAR/QUADRATIC
+    float range; // range (== 0 INFINITE)
+    float angle; // spot angle
+  };
+
+  struct MaterialProps
+  {
+    vec4 Oa; // ambient color
+    vec4 Od; // diffuse color
+    vec4 Os; // specular spot color
+    float shine; // specular shininess exponent
+  };
+
+  struct LineProps
+  {
+    vec4 color;
+    float width;
+  };
+);
+
+// Depends on PROPS_DECLARATIONS.
+const char* LIGHTING_BLOCK_DECLARATION = STRINGIFY(
+  layout(binding = 0, std140) uniform LightingBlock
+  {
+    LightProps lights[8];
+    vec4 ambientLight;
+    int lightCount;
+  };
+);
+
+const char* MATRIX_BLOCK_DECLARATION = STRINGIFY(
+  layout(binding = 1, std140) uniform MatrixBlock
+  {
+    mat4 viewportMatrix;
+    mat4 mvMatrix;
+    mat4 mvpMatrix;
+    mat3 normalMatrix;
+  };
+);
+
+// Depends on PROPS_DECLARATIONS.
+const char* CONFIG_BLOCK_DECLARATION = STRINGIFY(
+  layout(binding = 2, std140) uniform ConfigBlock
+  {
+    MaterialProps material;
+    LineProps line;
+    int projectionType; // PERSPECTIVE/PARALLEL
+    //vec4 backFaceColor = vec4(1, 0, 1, 1);
+  };
+);
+
+} // namespace GLSL
+
 static const char* vertexShader = STRINGIFY(
   layout(location = 0) in vec4 position;
   layout(location = 1) in vec3 normal;
   layout(location = 2) in vec4 color;
-  uniform mat4 mvMatrix;
-  uniform mat3 normalMatrix;
-  uniform mat4 mvpMatrix;
-  out vec3 vPosition;
-  out vec3 vNormal;
-  out vec4 vColor;
+
+  layout(location = 0) out vec3 vPosition;
+  layout(location = 1) out vec3 vNormal;
+  layout(location = 2) out vec4 vColor;
 
   void main()
   {
@@ -67,14 +130,14 @@ static const char* geometryShader = STRINGIFY(
   layout(triangles) in;
   layout(triangle_strip, max_vertices = 3) out;
 
-  in vec3 vPosition[];
-  in vec3 vNormal[];
-  in vec4 vColor[];
-  uniform mat4 viewportMatrix;
-  out vec3 gPosition;
-  out vec3 gNormal;
-  out vec4 gColor;
-  noperspective out vec3 gEdgeDistance;
+  layout(location = 0) in vec3 vPosition[];
+  layout(location = 1) in vec3 vNormal[];
+  layout(location = 2) in vec4 vColor[];
+
+  layout(location = 0) out vec3 gPosition;
+  layout(location = 1) out vec3 gNormal;
+  layout(location = 2) out vec4 gColor;
+  layout(location = 3) noperspective out vec3 gEdgeDistance;
 
   void main()
   {
@@ -116,51 +179,16 @@ static const char* geometryShader = STRINGIFY(
 );
 
 static const char* fragmentShader = STRINGIFY(
-  struct LightProps
-  {
-    vec4 color; // color
-    vec3 position; // VRC position
-    vec3 direction; // VRC direction
-    int type; // DIRECTIONAL/POINT/SPOT
-    int falloff; // CONSTANT/LINEAR/QUADRATIC
-    float range; // range (== 0 INFINITE)
-    float angle; // spot angle
-  };
-
-  struct MaterialProps
-  {
-    vec4 Oa; // ambient color
-    vec4 Od; // diffuse color
-    vec4 Os; // specular spot color
-    float shine; // specular shininess exponent
-  };
-
-  struct LineProps
-  {
-    float width;
-    vec4 color;
-  };
-
   subroutine vec4 mixColorType(vec4 color);
   subroutine void matPropsType(out MaterialProps m);
 
-  in vec3 gPosition;
-  in vec3 gNormal;
-  in vec4 gColor;
-  noperspective in vec3 gEdgeDistance;
-  //uniform vec4 backFaceColor = vec4(1, 0, 1, 1);
-  uniform int projectionType; // PERSPECTIVE/PARALLEL
-  uniform vec4 ambientLight;
-  uniform MaterialProps material;
-  uniform LineProps line;
-  subroutine uniform mixColorType mixColor;
-  subroutine uniform matPropsType matProps;
+  layout(location = 0) in vec3 gPosition;
+  layout(location = 1) in vec3 gNormal;
+  layout(location = 2) in vec4 gColor;
+  layout(location = 3) noperspective in vec3 gEdgeDistance;
 
-  layout(binding = 0, std140, shared) uniform LightingBlock
-  {
-    LightProps lights[8];
-    int lightCount;
-  };
+  subroutine uniform mixColorType mixColor;
+  subroutine uniform matPropsType matProps;  
 
   layout(location = 0) out vec4 fragmentColor;
 
@@ -297,119 +325,86 @@ static const char* fragmentShader = STRINGIFY(
   }
 );
 
-struct GLRenderer::GLData
+GLRenderer::GLRenderer(SceneBase& scene, Camera& camera):
+  GLRendererBase{scene, camera}
 {
-  GLSL::Program program;
-  mat4f viewportMatrix;
-  GLint mvMatrixLoc;
-  GLint normalMatrixLoc;
-  GLint mvpMatrixLoc;
-  GLint viewportMatrixLoc;
-  GLint projectionTypeLoc;
-  GLint ambientLightLoc;
-  GLint OaLoc;
-  GLint OdLoc;
-  GLint OsLoc;
-  GLint nsLoc;
-  GLint lineWidthLoc;
-  GLint lineColorLoc;
-  GLuint noMixIdx;
-  GLuint lineColorMixIdx;
-  GLuint modelMaterialIdx;
-  GLuint colorMapMaterialIdx;
+  // Create shader programs
+  _gl.vertex = new GLSL::ShaderProgram(GL_VERTEX_SHADER, {
+    GLSL::VERSION,
+    GLSL::MATRIX_BLOCK_DECLARATION,
+    vertexShader
+  });
 
-  struct
-  {
-    GLuint defaultLightingBlock;
-  } buffers;
-  static constexpr auto bufferCount = sizeof (buffers) / sizeof(GLuint);
+  if (!_gl.vertex->ok())
+    throw new std::runtime_error("failed to create vertex shader program"
+      + _gl.vertex->infoLog());
 
-  GLData();
-  ~GLData();
+  _gl.geometry = new GLSL::ShaderProgram(GL_GEOMETRY_SHADER, {
+    GLSL::VERSION,
+    GLSL::MATRIX_BLOCK_DECLARATION,
+    geometryShader
+  });
 
-  void uniformLocations();
-  void subroutineIndices();
-  void renderDefaultLights();
+  if (!_gl.geometry->ok())
+    throw new std::runtime_error("failed to create geometry shader program\n"
+      + _gl.geometry->infoLog());
 
-}; // GLRenderer::GLData
+  _gl.fragment = new GLSL::ShaderProgram(GL_FRAGMENT_SHADER, {
+    GLSL::VERSION,
+    GLSL::PROPS_DECLARATIONS,
+    GLSL::LIGHTING_BLOCK_DECLARATION,
+    GLSL::CONFIG_BLOCK_DECLARATION,
+    fragmentShader
+  });
 
-inline void
-GLRenderer::GLData::uniformLocations()
+  if (!_gl.fragment->ok())
+    throw new std::runtime_error("failed to create fragment shader program"
+      + _gl.fragment->infoLog());
+
+  _gl.noMixIdx = _gl.fragment->subroutineIndex("noMix");
+  _gl.lineColorMixIdx = _gl.fragment->subroutineIndex("lineColorMix");
+  _gl.modelMaterialIdx = _gl.fragment->subroutineIndex("modelMaterial");
+  _gl.colorMapMaterialIdx = _gl.fragment->subroutineIndex("colorMapMaterial");
+
+  // Create uniform buffers
+  _gl.lightingBlock = new GLBuffer<GLSL::LightingBlock>(1, GL_UNIFORM_BUFFER);
+  _gl.matrixBlock = new GLBuffer<GLSL::MatrixBlock>(1, GL_UNIFORM_BUFFER);
+  _gl.configBlock = new GLBuffer<GLSL::ConfigBlock>(1, GL_UNIFORM_BUFFER);
+
+  // Create pipeline
+  glCreateProgramPipelines(1, &_gl.pipeline);
+  glUseProgramStages(_gl.pipeline, GL_VERTEX_SHADER_BIT, *_gl.vertex);
+  glUseProgramStages(_gl.pipeline, GL_GEOMETRY_SHADER_BIT, *_gl.geometry);
+  glUseProgramStages(_gl.pipeline, GL_FRAGMENT_SHADER_BIT, *_gl.fragment);
+
+  // Default target for glUniform* calls, including uniform subroutines
+  glActiveShaderProgram(_gl.pipeline, *_gl.fragment);
+}
+
+GLRenderer::~GLRenderer()
 {
-  mvMatrixLoc = program.uniformLocation("mvMatrix");
-  normalMatrixLoc = program.uniformLocation("normalMatrix");
-  mvpMatrixLoc = program.uniformLocation("mvpMatrix");
-  viewportMatrixLoc = program.uniformLocation("viewportMatrix");
-  projectionTypeLoc = program.uniformLocation("projectionType");
-  ambientLightLoc = program.uniformLocation("ambientLight");
-  OaLoc = program.uniformLocation("material.Oa");
-  OdLoc = program.uniformLocation("material.Od");
-  OsLoc = program.uniformLocation("material.Os");
-  nsLoc = program.uniformLocation("material.shine");
-  lineWidthLoc = program.uniformLocation("line.width");
-  lineColorLoc = program.uniformLocation("line.color");
+  glDeleteProgramPipelines(1, &_gl.pipeline);
 }
 
 inline void
-GLRenderer::GLData::subroutineIndices()
+GLRenderer::renderDefaultLights()
 {
-  noMixIdx = program.fragmentSubroutineIndex("noMix");
-  lineColorMixIdx = program.fragmentSubroutineIndex("lineColorMix");
-  modelMaterialIdx = program.fragmentSubroutineIndex("modelMaterial");
-  colorMapMaterialIdx = program.fragmentSubroutineIndex("colorMapMaterial");
-}
-
-inline void
-GLRenderer::GLData::renderDefaultLights()
-{
-  glBindBufferBase(GL_UNIFORM_BUFFER, 0, buffers.defaultLightingBlock);
-}
-
-inline
-GLRenderer::GLData::GLData():
-  program{"Renderer Program"}
-{
-  program.setShader(GL_GEOMETRY_SHADER, geometryShader);
-  program.setShader(GL_VERTEX_SHADER, vertexShader);
-  program.setShader(GL_FRAGMENT_SHADER, fragmentShader);
-  program.use();
-  uniformLocations();
-  subroutineIndices();
-
   GLSL::LightingBlock b;
 
+  b.ambientLight = _scene->ambientLight;
   b.lights[0].type = 1; // POINT
   b.lights[0].color = vec4f{1, 1, 1, 0};
   b.lights[0].position = vec3f{0, 0, 0};
   b.lights[0].range = 0.0f;
   b.lightCount = 1;
 
-  glCreateBuffers(bufferCount, (GLuint*) &buffers);
-  glNamedBufferStorage(
-    buffers.defaultLightingBlock,
+  glNamedBufferSubData(
+    *_gl.lightingBlock,
+    0,
     sizeof (GLSL::LightingBlock),
-    (void*) &b,
-    0 // Immutable buffer storage
+    (void*) &b
   );
-}
-
-inline
-GLRenderer::GLData::~GLData()
-{
-  glDeleteBuffers(bufferCount, (GLuint*) &buffers);
-}
-
-GLRenderer::GLRenderer(SceneBase& scene, Camera& camera):
-  GLRendererBase{scene, camera},
-  _gl{new GLData{}},
-  _lightingBlock{new GLBuffer<GLSL::LightingBlock>(1, GL_UNIFORM_BUFFER)}
-{
-  // do nothing
-}
-
-GLRenderer::~GLRenderer()
-{
-  delete _gl;
+  glBindBufferBase(GL_UNIFORM_BUFFER, GLSL::LightingBlockBindingLoc, GLuint(*_gl.lightingBlock));
 }
 
 void
@@ -422,10 +417,10 @@ GLRenderer::update()
   auto w = _viewport.w / 2.0f;
   auto h = _viewport.h / 2.0f;
 
-  _gl->viewportMatrix[0].set(w, 0, 0, 0);
-  _gl->viewportMatrix[1].set(0, h, 0, 0);
-  _gl->viewportMatrix[2].set(0, 0, 1, 0);
-  _gl->viewportMatrix[3].set(w, h, 0, 0);
+  _gl.viewportMatrix[0].set(w, 0, 0, 0);
+  _gl.viewportMatrix[1].set(0, h, 0, 0);
+  _gl.viewportMatrix[2].set(0, 0, 1, 0);
+  _gl.viewportMatrix[3].set(w, h, 0, 0);
   _windowViewportRatio = _camera->windowHeight() / _viewport.h;
 }
 
@@ -446,14 +441,16 @@ GLRenderer::pixelsLength(float d) const
 void
 GLRenderer::renderLights()
 {
-  _gl->program.setUniformVec4(_gl->ambientLightLoc, _scene->ambientLight);
   if (_scene->lightCount() == 0)
   {
-    _gl->renderDefaultLights();
+    renderDefaultLights();
     return;
   }
 
-  auto block = static_cast<GLSL::LightingBlock*>(glMapNamedBuffer(*_lightingBlock, GL_WRITE_ONLY));
+  auto block = static_cast<GLSL::LightingBlock*>(
+    glMapNamedBuffer(*_gl.lightingBlock, GL_WRITE_ONLY));
+
+  block->ambientLight = _scene->ambientLight;
 
   const auto& vm = _camera->worldToCameraMatrix();
   int nl{0};
@@ -480,8 +477,8 @@ GLRenderer::renderLights()
   }
   block->lightCount = nl;
 
-  glUnmapNamedBuffer(*_lightingBlock);
-  glBindBufferBase(GL_UNIFORM_BUFFER, 0, GLuint(*_lightingBlock));
+  glUnmapNamedBuffer(*_gl.lightingBlock);
+  glBindBufferBase(GL_UNIFORM_BUFFER, GLSL::LightingBlockBindingLoc, GLuint(*_gl.lightingBlock));
 }
 
 void
@@ -516,9 +513,28 @@ GLRenderer::beginRender()
 
   glClearColor((float)bc.r, (float)bc.g, (float)bc.b, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  _gl->program.use();
-  _gl->program.setUniform(_gl->projectionTypeLoc, _camera->projectionType());
-  _gl->program.setUniformMat4(_gl->viewportMatrixLoc, _gl->viewportMatrix);
+
+  glUseProgram(0);
+  glBindProgramPipeline(_gl.pipeline);
+
+  glNamedBufferSubData(
+    *_gl.matrixBlock,
+    offsetof (GLSL::MatrixBlock, viewportMatrix),
+    sizeof (_gl.viewportMatrix),
+    &_gl.viewportMatrix
+  );
+
+  int projectionType = _camera->projectionType();
+  glNamedBufferSubData(
+    *_gl.configBlock,
+    offsetof (GLSL::ConfigBlock, projectionType),
+    sizeof (projectionType),
+    &projectionType
+  );
+
+  glBindBufferBase(GL_UNIFORM_BUFFER, GLSL::MatrixBlockBindingLoc, *_gl.matrixBlock);
+  glBindBufferBase(GL_UNIFORM_BUFFER, GLSL::ConfigBlockBindingLoc, *_gl.configBlock);
+
   glPolygonMode(GL_FRONT_AND_BACK,
     (renderMode != RenderMode::Wireframe) + GL_LINE);
 }
@@ -539,18 +555,21 @@ GLRenderer::endRender()
   if (_renderFunction != nullptr)
     _renderFunction(*this);
   glFlush();
-  _gl->program.disuse();
 }
 
 void
 GLRenderer::renderMaterial(const Material& material)
 {
-  _gl->program.setUniformVec4(_gl->OaLoc, material.ambient);
-  _gl->program.setUniformVec4(_gl->OdLoc, material.diffuse);
-  _gl->program.setUniformVec4(_gl->OsLoc, material.spot);
-  _gl->program.setUniform(_gl->nsLoc, material.shine);
-  //_gl->program.setUniform(_gl->lineWidthLoc, material.lineWidth);
-  //_gl->program.setUniformVec4(_gl->lineColorLoc, material.lineColor);
+  auto block = static_cast<GLSL::ConfigBlock*>(glMapNamedBuffer(*_gl.configBlock, GL_WRITE_ONLY));
+
+  block->material.Oa = material.ambient;
+  block->material.Od = material.diffuse;
+  block->material.Os = material.spot;
+  block->material.shine = material.shine;
+  // block->line.width = material.lineWidth;
+  // block->line.color = material.lineColor;
+
+  glUnmapNamedBuffer(*_gl.configBlock);
 }
 
 inline mat4f
@@ -579,21 +598,23 @@ GLRenderer::drawMesh(const Primitive& primitive)
   if (nullptr == mesh)
     return false;
 
-  auto mvm = mvMatrix(*_camera, primitive);
+  auto block = static_cast<GLSL::MatrixBlock*>(glMapNamedBuffer(*_gl.matrixBlock, GL_WRITE_ONLY));
 
-  _gl->program.setUniformMat4(_gl->mvMatrixLoc, mvm);
-  _gl->program.setUniformMat4(_gl->mvpMatrixLoc, mvpMatrix(mvm, *_camera));
-  _gl->program.setUniformMat3(_gl->normalMatrixLoc,
-    normalMatrix(*_camera, primitive));
+  auto mvm = mvMatrix(*_camera, primitive);
+  block->mvMatrix = mvm;
+  block->mvpMatrix = mvpMatrix(mvm, *_camera);
+  block->normalMatrix = normalMatrix(*_camera, primitive);
+
+  glUnmapNamedBuffer(*_gl.matrixBlock);
 
   GLuint subIds[2];
 
   subIds[0] = renderMode == RenderMode::HiddenLines ?
-    _gl->lineColorMixIdx :
-    _gl->noMixIdx;
+    _gl.lineColorMixIdx :
+    _gl.noMixIdx;
   subIds[1] = flags.isSet(UseVertexColors) ?
-    _gl->colorMapMaterialIdx :
-    _gl->modelMaterialIdx;
+    _gl.colorMapMaterialIdx :
+    _gl.modelMaterialIdx;
   glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 2, subIds);
   renderMaterial(*primitive.material());
   if (auto m = glMesh(mesh))
@@ -625,5 +646,6 @@ GLRenderer::drawAxes(const mat4f& m, float s)
   r[2].normalize();
   GLGraphics3::drawAxes(vec3f{m[3]}, r, s);
 }
+
 
 } // end namespace cg
