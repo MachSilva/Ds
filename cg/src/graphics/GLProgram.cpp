@@ -28,7 +28,8 @@
 // Source file for GLSL program.
 //
 // Author: Paulo Pagliosa
-// Last revision: 10/08/2018
+// Modified by; Felipe Machado
+// Last revision: 19/09/2022
 
 #include "graphics/GLProgram.h"
 #include <cstdarg>
@@ -151,6 +152,9 @@ public:
   // Sets source.
   void setSource(const char*);
 
+  // Sets sources.
+  void setSource(std::initializer_list<const char*>);
+
   // Casts to handle type.
   operator GLuint() const
   {
@@ -214,6 +218,17 @@ Shader::loadSourceFromFile(const char* fileName)
   _compiled = false;
   // Delete buffer.
   delete[] buffer;
+  // Compile shader.
+  compile();
+}
+
+inline void
+Shader::setSource(std::initializer_list<const char*> sources)
+{
+  if (sources.size() == 0)
+    return;
+  // Set shader source code.
+  glShaderSource(_handle, sources.size(), sources.begin(), nullptr);
   // Compile shader.
   compile();
 }
@@ -287,6 +302,24 @@ Program::addShader(GLenum type, ShaderSource source, const char* buffer)
     s.loadSourceFromFile(buffer);
   else
     s.setSource(buffer);
+  // Attach shader.
+  glAttachShader(_handle, s);
+  _state = State::MODIFIED;
+  return *this;
+}
+
+Program&
+Program::setShader(GLenum type, std::initializer_list<const char*> code)
+{
+  if (_handle == 0)
+    // Create program.
+    _handle = glCreateProgram();
+
+  Shader s{type};
+
+  if (_state == State::IN_USE)
+    error(CANNOT_ATTACH_SHADER, name(), s.name());
+  s.setSource(code);
   // Attach shader.
   glAttachShader(_handle, s);
   _state = State::MODIFIED;

@@ -118,11 +118,11 @@ struct ConfigBlock
   int projectionType; // PERSPECTIVE/PARALLEL
 };
 
-enum BindingLocations
+enum BindingPoints
 {
-  LightingBlockBindingLoc = 0,
-  MatrixBlockBindingLoc = 1,
-  ConfigBlockBindingLoc = 2
+  LightingBlockBindingPoint = 0,
+  MatrixBlockBindingPoint = 1,
+  ConfigBlockBindingPoint = 2
 };
 
 extern const char* VERSION;
@@ -184,6 +184,51 @@ private:
   GLint _link = 0;
 };
 
+class RendererProgram
+{
+public:
+  void setMatrixBlockBinding(GLuint binding) const
+  {
+    setBinding(_matrixBlockIdx, binding);
+  }
+
+  void setConfigBlockBinding(GLuint binding) const
+  {
+    setBinding(_configBlockIdx, binding);
+  }
+
+  void setLightingBlockBinding(GLuint binding) const
+  {
+    setBinding(_lightingBlockIdx, binding);
+  }
+
+protected:
+  RendererProgram(GLuint program) : _handle{program}
+  {
+    _matrixBlockIdx = glGetUniformBlockIndex(_handle, "MatrixBlock");
+    _configBlockIdx = glGetUniformBlockIndex(_handle, "ConfigBlock");
+    _lightingBlockIdx = glGetUniformBlockIndex(_handle, "LightingBlock");
+  }
+
+  void setBinding(GLuint index, GLuint binding) const
+  {
+    if (index != GL_INVALID_INDEX)
+    {
+      glUniformBlockBinding(_handle, index, binding);
+    }
+    else
+    {
+      // error
+    }
+  }
+
+private:
+  GLuint _handle;
+  GLuint _matrixBlockIdx;
+  GLuint _configBlockIdx;
+  GLuint _lightingBlockIdx;
+};
+
 } // namespace GLSL
 
 //////////////////////////////////////////////////////////
@@ -216,10 +261,108 @@ public:
     _renderFunction = f;
   }
 
-  GLBuffer<GLSL::LightingBlock>& lightingBlock() { return *_gl.lightingBlock; }
+  /**
+   * An uniform buffer containing the current lights of the scene.
+   */
+  GLBuffer<GLSL::LightingBlock>& lightingBlock();
+
+  /**
+   * The vertex shader program used in this renderer.
+   * You may use it as the vertex stage in your custom pipeline.
+   * 
+   * @warning Be careful to match the required interface of the input/output
+   * variables in the other stages of your pipeline, otherwise your pipeline
+   * may end in an undefined behavior.
+   * 
+   * The required interface of the vertex attributes:
+   * 
+   * layout(location = 0) in vec4 position;
+   * layout(location = 1) in vec3 normal;
+   * layout(location = 2) in vec4 color;
+   * 
+   * The output interface:
+   * 
+   * layout(location = 0) out vec3 vPosition;
+   * layout(location = 1) out vec3 vNormal;
+   * layout(location = 2) out vec4 vColor;
+   * 
+   * @return GLSL::ShaderProgram* Vertex shader program.
+   */
+  GLSL::ShaderProgram* vertexShader();
+
+  /**
+   * The geometry shader program used in this renderer.
+   * You may use it as the vertex stage in your custom pipeline.
+   * 
+   * @warning Be careful to match the required interface of the input/output
+   * variables in the other stages of your pipeline, otherwise your pipeline
+   * may end in an undefined behavior.
+   * 
+   * The input interface:
+   * 
+   * layout(location = 0) in vec3 vPosition[];
+   * layout(location = 1) in vec3 vNormal[];
+   * layout(location = 2) in vec4 vColor[];
+   * 
+   * The output interface:
+   * 
+   * layout(location = 0) out vec3 gPosition;
+   * layout(location = 1) out vec3 gNormal;
+   * layout(location = 2) out vec4 gColor;
+   * layout(location = 3) noperspective out vec3 gEdgeDistance;
+   * 
+   * @return GLSL::ShaderProgram* Geometry shader program.
+   */
+  GLSL::ShaderProgram* geometryShader();
+
+  /**
+   * The fragment shader program used in this renderer.
+   * You may use it as the vertex stage in your custom pipeline.
+   * 
+   * @warning Be careful to match the required interface of the input/output
+   * variables in the other stages of your pipeline, otherwise your pipeline
+   * may end in an undefined behavior.
+   * 
+   * The input interface:
+   * 
+   * layout(location = 0) in vec3 gPosition;
+   * layout(location = 1) in vec3 gNormal;
+   * layout(location = 2) in vec4 gColor;
+   * layout(location = 3) noperspective in vec3 gEdgeDistance;
+   * 
+   * The required framebuffer output interface:
+   * 
+   * layout(location = 0) out vec4 fragmentColor;
+   * 
+   * Also, this shader contains two subroutines that must be set before every
+   * draw call.
+   * 
+   * @return GLSL::ShaderProgram* Fragment shader program.
+   */
+  GLSL::ShaderProgram* fragmentShader();
+
+  enum PipelineCode
+  {
+    Default = 0, Mesh = 0,
+    Sphere  = 0x01,
+    Surface = 0x02,
+    Custom  = 0x10,
+    Custom1 = 0x11,
+    Custom2 = 0x12,
+    Custom3 = 0x13,
+    Max     = 0x20
+  };
+
+  class Pipeline;
+  class MeshPipeline;
+
+  Pipeline* pipeline(uint32_t code) const { return _pipelines[code].get(); }
+
+  void setPipeline(uint32_t code, Pipeline* p);
 
 protected:
   RenderFunction _renderFunction{};
+  mat4f _viewportMatrix;
   vec3f _basePoint;
   float _basePointZ;
   float _windowViewportRatio;
@@ -233,24 +376,70 @@ protected:
 
   void renderDefaultLights();
 
-  struct GLData
-  {
-    GLuint pipeline; // Default pipeline
-    Reference<GLSL::ShaderProgram> vertex, geometry, fragment;
-
-    Reference<GLBuffer<GLSL::LightingBlock>> lightingBlock;
-    Reference<GLBuffer<GLSL::MatrixBlock>> matrixBlock;
-    Reference<GLBuffer<GLSL::ConfigBlock>> configBlock;
-
-    mat4f viewportMatrix;
-
-    GLuint noMixIdx;
-    GLuint lineColorMixIdx;
-    GLuint modelMaterialIdx;
-    GLuint colorMapMaterialIdx;
-  } _gl;
+  Reference<Pipeline> _pipelines[PipelineCode::Max] {};
+  Reference<MeshPipeline> _gl; // Default pipeline. Listed in _pipelines[0].
 
 }; // GLRenderer
+
+class GLRenderer::Pipeline : public SharedObject
+{
+public:
+  ~Pipeline() override;
+
+  operator GLuint () const { return _pipeline; }
+
+  void use()
+  {
+    glUseProgram(0);
+    glBindProgramPipeline(_pipeline);
+  }
+
+protected:
+  Pipeline();
+
+  GLuint _pipeline;
+};
+
+class GLRenderer::MeshPipeline : public GLRenderer::Pipeline
+{
+public:
+  MeshPipeline();
+  ~MeshPipeline() override;
+
+  GLSL::ShaderProgram* vertex() { return _vertex; }
+  GLSL::ShaderProgram* geometry() { return _geometry; }
+  GLSL::ShaderProgram* fragment() { return _fragment; }
+
+  GLBuffer<GLSL::LightingBlock>* lightingBlock() const { return _lightingBlock; }
+  GLBuffer<GLSL::MatrixBlock>* matrixBlock() const { return _matrixBlock; }
+  GLBuffer<GLSL::ConfigBlock>* configBlock() const { return _configBlock; }
+
+  GLuint noMixIdx() const { return _noMixIdx; }
+  GLuint lineColorMixIdx() const { return _lineColorMixIdx; }
+  GLuint modelMaterialIdx() const { return _modelMaterialIdx; }
+  GLuint colorMapMaterialIdx() const { return _colorMapMaterialIdx; }
+
+protected:
+  Reference<GLSL::ShaderProgram> _vertex, _geometry, _fragment;
+
+  Reference<GLBuffer<GLSL::LightingBlock>> _lightingBlock;
+  Reference<GLBuffer<GLSL::MatrixBlock>> _matrixBlock;
+  Reference<GLBuffer<GLSL::ConfigBlock>> _configBlock;
+
+  GLuint _noMixIdx;
+  GLuint _lineColorMixIdx;
+  GLuint _modelMaterialIdx;
+  GLuint _colorMapMaterialIdx;
+};
+
+
+inline GLBuffer<GLSL::LightingBlock>& GLRenderer::lightingBlock() { return *_gl->lightingBlock(); }
+
+inline GLSL::ShaderProgram* GLRenderer::vertexShader() { return _gl->vertex(); }
+
+inline GLSL::ShaderProgram* GLRenderer::geometryShader() { return _gl->geometry(); }
+
+inline GLSL::ShaderProgram* GLRenderer::fragmentShader() { return _gl->fragment(); }
 
 } // end namespace cg
 

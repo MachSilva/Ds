@@ -29,7 +29,7 @@
 //
 // Author: Paulo Pagliosa
 // Modified by: Felipe Machado
-// Last revision: 16/09/2022
+// Last revision: 30/03/2023
 
 #include "graphics/GLRenderer.h"
 
@@ -108,7 +108,7 @@ const char* CONFIG_BLOCK_DECLARATION = STRINGIFY(
 
 } // namespace GLSL
 
-static const char* vertexShader = STRINGIFY(
+static const char* gVertexShader = STRINGIFY(
   layout(location = 0) in vec4 position;
   layout(location = 1) in vec3 normal;
   layout(location = 2) in vec4 color;
@@ -126,7 +126,7 @@ static const char* vertexShader = STRINGIFY(
   }
 );
 
-static const char* geometryShader = STRINGIFY(
+static const char* gGeometryShader = STRINGIFY(
   layout(triangles) in;
   layout(triangle_strip, max_vertices = 3) out;
 
@@ -178,7 +178,7 @@ static const char* geometryShader = STRINGIFY(
   }
 );
 
-static const char* fragmentShader = STRINGIFY(
+static const char* gFragmentShader = STRINGIFY(
   subroutine vec4 mixColorType(vec4 color);
   subroutine void matPropsType(out MaterialProps m);
 
@@ -325,66 +325,79 @@ static const char* fragmentShader = STRINGIFY(
   }
 );
 
-GLRenderer::GLRenderer(SceneBase& scene, Camera& camera):
-  GLRendererBase{scene, camera}
+GLRenderer::Pipeline::Pipeline()
+{
+  glCreateProgramPipelines(1, &_pipeline);
+}
+
+GLRenderer::Pipeline::~Pipeline()
+{
+  glDeleteProgramPipelines(1, &_pipeline);
+}
+
+GLRenderer::MeshPipeline::MeshPipeline()
 {
   // Create shader programs
-  _gl.vertex = new GLSL::ShaderProgram(GL_VERTEX_SHADER, {
+  _vertex = new GLSL::ShaderProgram(GL_VERTEX_SHADER, {
     GLSL::VERSION,
     GLSL::MATRIX_BLOCK_DECLARATION,
-    vertexShader
+    gVertexShader
   });
 
-  if (!_gl.vertex->ok())
+  if (!_vertex->ok())
     throw new std::runtime_error("failed to create vertex shader program"
-      + _gl.vertex->infoLog());
+      + _vertex->infoLog());
 
-  _gl.geometry = new GLSL::ShaderProgram(GL_GEOMETRY_SHADER, {
+  _geometry = new GLSL::ShaderProgram(GL_GEOMETRY_SHADER, {
     GLSL::VERSION,
     GLSL::MATRIX_BLOCK_DECLARATION,
-    geometryShader
+    gGeometryShader
   });
 
-  if (!_gl.geometry->ok())
+  if (!_geometry->ok())
     throw new std::runtime_error("failed to create geometry shader program\n"
-      + _gl.geometry->infoLog());
+      + _geometry->infoLog());
 
-  _gl.fragment = new GLSL::ShaderProgram(GL_FRAGMENT_SHADER, {
+  _fragment = new GLSL::ShaderProgram(GL_FRAGMENT_SHADER, {
     GLSL::VERSION,
     GLSL::PROPS_DECLARATIONS,
     GLSL::LIGHTING_BLOCK_DECLARATION,
     GLSL::CONFIG_BLOCK_DECLARATION,
-    fragmentShader
+    gFragmentShader
   });
 
-  if (!_gl.fragment->ok())
+  if (!_fragment->ok())
     throw new std::runtime_error("failed to create fragment shader program"
-      + _gl.fragment->infoLog());
+      + _fragment->infoLog());
 
-  _gl.noMixIdx = _gl.fragment->subroutineIndex("noMix");
-  _gl.lineColorMixIdx = _gl.fragment->subroutineIndex("lineColorMix");
-  _gl.modelMaterialIdx = _gl.fragment->subroutineIndex("modelMaterial");
-  _gl.colorMapMaterialIdx = _gl.fragment->subroutineIndex("colorMapMaterial");
+  _noMixIdx = _fragment->subroutineIndex("noMix");
+  _lineColorMixIdx = _fragment->subroutineIndex("lineColorMix");
+  _modelMaterialIdx = _fragment->subroutineIndex("modelMaterial");
+  _colorMapMaterialIdx = _fragment->subroutineIndex("colorMapMaterial");
 
   // Create uniform buffers
-  _gl.lightingBlock = new GLBuffer<GLSL::LightingBlock>(1, GL_UNIFORM_BUFFER);
-  _gl.matrixBlock = new GLBuffer<GLSL::MatrixBlock>(1, GL_UNIFORM_BUFFER);
-  _gl.configBlock = new GLBuffer<GLSL::ConfigBlock>(1, GL_UNIFORM_BUFFER);
+  _lightingBlock = new GLBuffer<GLSL::LightingBlock>(1, GL_UNIFORM_BUFFER);
+  _matrixBlock = new GLBuffer<GLSL::MatrixBlock>(1, GL_UNIFORM_BUFFER);
+  _configBlock = new GLBuffer<GLSL::ConfigBlock>(1, GL_UNIFORM_BUFFER);
 
   // Create pipeline
-  glCreateProgramPipelines(1, &_gl.pipeline);
-  glUseProgramStages(_gl.pipeline, GL_VERTEX_SHADER_BIT, *_gl.vertex);
-  glUseProgramStages(_gl.pipeline, GL_GEOMETRY_SHADER_BIT, *_gl.geometry);
-  glUseProgramStages(_gl.pipeline, GL_FRAGMENT_SHADER_BIT, *_gl.fragment);
+  glUseProgramStages(_pipeline, GL_VERTEX_SHADER_BIT, *_vertex);
+  glUseProgramStages(_pipeline, GL_GEOMETRY_SHADER_BIT, *_geometry);
+  glUseProgramStages(_pipeline, GL_FRAGMENT_SHADER_BIT, *_fragment);
 
   // Default target for glUniform* calls, including uniform subroutines
-  glActiveShaderProgram(_gl.pipeline, *_gl.fragment);
+  glActiveShaderProgram(_pipeline, *_fragment);
 }
 
-GLRenderer::~GLRenderer()
+GLRenderer::MeshPipeline::~MeshPipeline() { /* RAII */ }
+
+GLRenderer::GLRenderer(SceneBase& scene, Camera& camera):
+  GLRendererBase{scene, camera}
 {
-  glDeleteProgramPipelines(1, &_gl.pipeline);
+  _pipelines[0] = _gl = new MeshPipeline();
 }
+
+GLRenderer::~GLRenderer() {}
 
 inline void
 GLRenderer::renderDefaultLights()
@@ -399,12 +412,12 @@ GLRenderer::renderDefaultLights()
   b.lightCount = 1;
 
   glNamedBufferSubData(
-    *_gl.lightingBlock,
+    *_gl->lightingBlock(),
     0,
     sizeof (GLSL::LightingBlock),
     (void*) &b
   );
-  glBindBufferBase(GL_UNIFORM_BUFFER, GLSL::LightingBlockBindingLoc, GLuint(*_gl.lightingBlock));
+  glBindBufferBase(GL_UNIFORM_BUFFER, GLSL::LightingBlockBindingPoint, GLuint(*_gl->lightingBlock()));
 }
 
 void
@@ -417,10 +430,10 @@ GLRenderer::update()
   auto w = _viewport.w / 2.0f;
   auto h = _viewport.h / 2.0f;
 
-  _gl.viewportMatrix[0].set(w, 0, 0, 0);
-  _gl.viewportMatrix[1].set(0, h, 0, 0);
-  _gl.viewportMatrix[2].set(0, 0, 1, 0);
-  _gl.viewportMatrix[3].set(w, h, 0, 0);
+  _viewportMatrix[0].set(w, 0, 0, 0);
+  _viewportMatrix[1].set(0, h, 0, 0);
+  _viewportMatrix[2].set(0, 0, 1, 0);
+  _viewportMatrix[3].set(w, h, 0, 0);
   _windowViewportRatio = _camera->windowHeight() / _viewport.h;
 }
 
@@ -448,7 +461,7 @@ GLRenderer::renderLights()
   }
 
   auto block = static_cast<GLSL::LightingBlock*>(
-    glMapNamedBuffer(*_gl.lightingBlock, GL_WRITE_ONLY));
+    glMapNamedBuffer(*_gl->lightingBlock(), GL_WRITE_ONLY));
 
   block->ambientLight = _scene->ambientLight;
 
@@ -477,8 +490,8 @@ GLRenderer::renderLights()
   }
   block->lightCount = nl;
 
-  glUnmapNamedBuffer(*_gl.lightingBlock);
-  glBindBufferBase(GL_UNIFORM_BUFFER, GLSL::LightingBlockBindingLoc, GLuint(*_gl.lightingBlock));
+  glUnmapNamedBuffer(*_gl->lightingBlock());
+  glBindBufferBase(GL_UNIFORM_BUFFER, GLSL::LightingBlockBindingPoint, GLuint(*_gl->lightingBlock()));
 }
 
 void
@@ -515,25 +528,25 @@ GLRenderer::beginRender()
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   glUseProgram(0);
-  glBindProgramPipeline(_gl.pipeline);
+  glBindProgramPipeline(GLuint(*_gl));
 
   glNamedBufferSubData(
-    *_gl.matrixBlock,
+    *_gl->matrixBlock(),
     offsetof (GLSL::MatrixBlock, viewportMatrix),
-    sizeof (_gl.viewportMatrix),
-    &_gl.viewportMatrix
+    sizeof (_viewportMatrix),
+    &_viewportMatrix
   );
 
   int projectionType = _camera->projectionType();
   glNamedBufferSubData(
-    *_gl.configBlock,
+    *_gl->configBlock(),
     offsetof (GLSL::ConfigBlock, projectionType),
     sizeof (projectionType),
     &projectionType
   );
 
-  glBindBufferBase(GL_UNIFORM_BUFFER, GLSL::MatrixBlockBindingLoc, *_gl.matrixBlock);
-  glBindBufferBase(GL_UNIFORM_BUFFER, GLSL::ConfigBlockBindingLoc, *_gl.configBlock);
+  glBindBufferBase(GL_UNIFORM_BUFFER, GLSL::MatrixBlockBindingPoint, *_gl->matrixBlock());
+  glBindBufferBase(GL_UNIFORM_BUFFER, GLSL::ConfigBlockBindingPoint, *_gl->configBlock());
 
   glPolygonMode(GL_FRONT_AND_BACK,
     (renderMode != RenderMode::Wireframe) + GL_LINE);
@@ -560,7 +573,7 @@ GLRenderer::endRender()
 void
 GLRenderer::renderMaterial(const Material& material)
 {
-  auto block = static_cast<GLSL::ConfigBlock*>(glMapNamedBuffer(*_gl.configBlock, GL_WRITE_ONLY));
+  auto block = static_cast<GLSL::ConfigBlock*>(glMapNamedBuffer(*_gl->configBlock(), GL_WRITE_ONLY));
 
   block->material.Oa = material.ambient;
   block->material.Od = material.diffuse;
@@ -569,7 +582,7 @@ GLRenderer::renderMaterial(const Material& material)
   // block->line.width = material.lineWidth;
   // block->line.color = material.lineColor;
 
-  glUnmapNamedBuffer(*_gl.configBlock);
+  glUnmapNamedBuffer(*_gl->configBlock());
 }
 
 inline mat4f
@@ -598,23 +611,23 @@ GLRenderer::drawMesh(const Primitive& primitive)
   if (nullptr == mesh)
     return false;
 
-  auto block = static_cast<GLSL::MatrixBlock*>(glMapNamedBuffer(*_gl.matrixBlock, GL_WRITE_ONLY));
+  auto block = static_cast<GLSL::MatrixBlock*>(glMapNamedBuffer(*_gl->matrixBlock(), GL_WRITE_ONLY));
 
   auto mvm = mvMatrix(*_camera, primitive);
   block->mvMatrix = mvm;
   block->mvpMatrix = mvpMatrix(mvm, *_camera);
   block->normalMatrix = normalMatrix(*_camera, primitive);
 
-  glUnmapNamedBuffer(*_gl.matrixBlock);
+  glUnmapNamedBuffer(*_gl->matrixBlock());
 
   GLuint subIds[2];
 
   subIds[0] = renderMode == RenderMode::HiddenLines ?
-    _gl.lineColorMixIdx :
-    _gl.noMixIdx;
+    _gl->lineColorMixIdx() :
+    _gl->noMixIdx();
   subIds[1] = flags.isSet(UseVertexColors) ?
-    _gl.colorMapMaterialIdx :
-    _gl.modelMaterialIdx;
+    _gl->colorMapMaterialIdx() :
+    _gl->modelMaterialIdx();
   glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 2, subIds);
   renderMaterial(*primitive.material());
   if (auto m = glMesh(mesh))
@@ -647,5 +660,19 @@ GLRenderer::drawAxes(const mat4f& m, float s)
   GLGraphics3::drawAxes(vec3f{m[3]}, r, s);
 }
 
+void
+GLRenderer::setPipeline(uint32_t code, Pipeline* p)
+{
+  assert(code < PipelineCode::Max);
+  if (code == 0)
+  {
+    if (auto q = dynamic_cast<MeshPipeline*>(p))
+      _pipelines[0] = _gl = q;
+  }
+  else
+  {
+    _pipelines[code] = p;
+  }
+}
 
 } // end namespace cg

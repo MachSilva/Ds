@@ -35,6 +35,7 @@
 
 #include "core/SharedObject.h"
 #include "graphics/Color.h"
+#include <cstdint>
 #include <stdexcept>
 
 namespace cg

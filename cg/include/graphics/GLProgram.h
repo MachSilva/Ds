@@ -28,7 +28,8 @@
 // Class definition for GLSL program.
 //
 // Author: Paulo Pagliosa
-// Last revision: 10/02/2022
+// Modified by; Felipe Machado
+// Last revision: 19/09/2022
 
 #ifndef __GLProgram_h
 #define __GLProgram_h
@@ -70,7 +71,7 @@ public:
     IN_USE
   };
 
-  // Constructs an intance of Program.
+  // Constructs an instance of Program.
   Program(const char*);
 
   Program(const Program&) = delete;
@@ -100,6 +101,8 @@ public:
   // Adds a shader in this program.
   Program& addShader(GLenum, ShaderSource, const char*);
 
+  Program& setShader(GLenum type, std::initializer_list<const char*> code);
+
   Program& setShader(GLenum type, const char* code)
   {
     return addShader(type, ShaderSource::STRING, code);
@@ -121,6 +124,11 @@ public:
   {
     loadShader(GL_VERTEX_SHADER, vs);
     return loadShader(GL_FRAGMENT_SHADER, fs);
+  }
+
+  void setSeparable(bool value)
+  {
+    glProgramParameteri(_handle, GL_PROGRAM_SEPARABLE, value);
   }
 
   // Uses/disuses this program.
