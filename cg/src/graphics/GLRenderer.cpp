@@ -29,7 +29,7 @@
 //
 // Author: Paulo Pagliosa
 // Modified by: Felipe Machado
-// Last revision: 30/03/2023
+// Last revision: 21/07/2023
 
 #include "graphics/GLRenderer.h"
 
@@ -412,12 +412,12 @@ GLRenderer::renderDefaultLights()
   b.lightCount = 1;
 
   glNamedBufferSubData(
-    *_gl->lightingBlock(),
+    _gl->lightingBlock(),
     0,
     sizeof (GLSL::LightingBlock),
     (void*) &b
   );
-  glBindBufferBase(GL_UNIFORM_BUFFER, GLSL::LightingBlockBindingPoint, GLuint(*_gl->lightingBlock()));
+  glBindBufferBase(GL_UNIFORM_BUFFER, GLSL::LightingBlockBindingPoint, _gl->lightingBlock());
 }
 
 void
@@ -461,7 +461,7 @@ GLRenderer::renderLights()
   }
 
   auto block = static_cast<GLSL::LightingBlock*>(
-    glMapNamedBuffer(*_gl->lightingBlock(), GL_WRITE_ONLY));
+    glMapNamedBuffer(_gl->lightingBlock(), GL_WRITE_ONLY));
 
   block->ambientLight = _scene->ambientLight;
 
@@ -490,8 +490,8 @@ GLRenderer::renderLights()
   }
   block->lightCount = nl;
 
-  glUnmapNamedBuffer(*_gl->lightingBlock());
-  glBindBufferBase(GL_UNIFORM_BUFFER, GLSL::LightingBlockBindingPoint, GLuint(*_gl->lightingBlock()));
+  glUnmapNamedBuffer(_gl->lightingBlock());
+  glBindBufferBase(GL_UNIFORM_BUFFER, GLSL::LightingBlockBindingPoint, _gl->lightingBlock());
 }
 
 void
@@ -527,11 +527,10 @@ GLRenderer::beginRender()
   glClearColor((float)bc.r, (float)bc.g, (float)bc.b, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  glUseProgram(0);
-  glBindProgramPipeline(GLuint(*_gl));
+  _gl->use();
 
   glNamedBufferSubData(
-    *_gl->matrixBlock(),
+    _gl->matrixBlock(),
     offsetof (GLSL::MatrixBlock, viewportMatrix),
     sizeof (_viewportMatrix),
     &_viewportMatrix
@@ -539,14 +538,14 @@ GLRenderer::beginRender()
 
   int projectionType = _camera->projectionType();
   glNamedBufferSubData(
-    *_gl->configBlock(),
+    _gl->configBlock(),
     offsetof (GLSL::ConfigBlock, projectionType),
     sizeof (projectionType),
     &projectionType
   );
 
-  glBindBufferBase(GL_UNIFORM_BUFFER, GLSL::MatrixBlockBindingPoint, *_gl->matrixBlock());
-  glBindBufferBase(GL_UNIFORM_BUFFER, GLSL::ConfigBlockBindingPoint, *_gl->configBlock());
+  glBindBufferBase(GL_UNIFORM_BUFFER, GLSL::MatrixBlockBindingPoint, _gl->matrixBlock());
+  glBindBufferBase(GL_UNIFORM_BUFFER, GLSL::ConfigBlockBindingPoint, _gl->configBlock());
 
   glPolygonMode(GL_FRONT_AND_BACK,
     (renderMode != RenderMode::Wireframe) + GL_LINE);
@@ -573,7 +572,7 @@ GLRenderer::endRender()
 void
 GLRenderer::renderMaterial(const Material& material)
 {
-  auto block = static_cast<GLSL::ConfigBlock*>(glMapNamedBuffer(*_gl->configBlock(), GL_WRITE_ONLY));
+  auto block = static_cast<GLSL::ConfigBlock*>(glMapNamedBuffer(_gl->configBlock(), GL_WRITE_ONLY));
 
   block->material.Oa = material.ambient;
   block->material.Od = material.diffuse;
@@ -582,7 +581,7 @@ GLRenderer::renderMaterial(const Material& material)
   // block->line.width = material.lineWidth;
   // block->line.color = material.lineColor;
 
-  glUnmapNamedBuffer(*_gl->configBlock());
+  glUnmapNamedBuffer(_gl->configBlock());
 }
 
 inline mat4f
@@ -611,14 +610,14 @@ GLRenderer::drawMesh(const Primitive& primitive)
   if (nullptr == mesh)
     return false;
 
-  auto block = static_cast<GLSL::MatrixBlock*>(glMapNamedBuffer(*_gl->matrixBlock(), GL_WRITE_ONLY));
+  auto b = static_cast<GLSL::MatrixBlock*>(glMapNamedBuffer(_gl->matrixBlock(), GL_WRITE_ONLY));
 
   auto mvm = mvMatrix(*_camera, primitive);
-  block->mvMatrix = mvm;
-  block->mvpMatrix = mvpMatrix(mvm, *_camera);
-  block->normalMatrix = normalMatrix(*_camera, primitive);
+  b->mvMatrix = mvm;
+  b->mvpMatrix = mvpMatrix(mvm, *_camera);
+  b->normalMatrix = normalMatrix(*_camera, primitive);
 
-  glUnmapNamedBuffer(*_gl->matrixBlock());
+  glUnmapNamedBuffer(_gl->matrixBlock());
 
   GLuint subIds[2];
 

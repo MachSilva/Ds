@@ -29,7 +29,7 @@
 //
 // Author: Paulo Pagliosa
 // Modified by: Felipe Machado
-// Last revision: 16/09/2022
+// Last revision: 21/07/2023
 
 #ifndef __GLRenderer_h
 #define __GLRenderer_h
@@ -267,6 +267,16 @@ public:
   GLBuffer<GLSL::LightingBlock>& lightingBlock();
 
   /**
+   * An uniform buffer containing transformation matrices.
+   */
+  GLBuffer<GLSL::MatrixBlock>& matrixBlock();
+
+  /**
+   * An uniform buffer containing the material and data for the fragment shader.
+   */
+  GLBuffer<GLSL::ConfigBlock>& configBlock();
+
+  /**
    * The vertex shader program used in this renderer.
    * You may use it as the vertex stage in your custom pipeline.
    * 
@@ -410,9 +420,9 @@ public:
   GLSL::ShaderProgram* geometry() { return _geometry; }
   GLSL::ShaderProgram* fragment() { return _fragment; }
 
-  GLBuffer<GLSL::LightingBlock>* lightingBlock() const { return _lightingBlock; }
-  GLBuffer<GLSL::MatrixBlock>* matrixBlock() const { return _matrixBlock; }
-  GLBuffer<GLSL::ConfigBlock>* configBlock() const { return _configBlock; }
+  GLBuffer<GLSL::LightingBlock>& lightingBlock() const { return *_lightingBlock; }
+  GLBuffer<GLSL::MatrixBlock>& matrixBlock() const { return *_matrixBlock; }
+  GLBuffer<GLSL::ConfigBlock>& configBlock() const { return *_configBlock; }
 
   GLuint noMixIdx() const { return _noMixIdx; }
   GLuint lineColorMixIdx() const { return _lineColorMixIdx; }
@@ -433,7 +443,11 @@ protected:
 };
 
 
-inline GLBuffer<GLSL::LightingBlock>& GLRenderer::lightingBlock() { return *_gl->lightingBlock(); }
+inline GLBuffer<GLSL::LightingBlock>& GLRenderer::lightingBlock() { return _gl->lightingBlock(); }
+
+inline GLBuffer<GLSL::MatrixBlock>& GLRenderer::matrixBlock() { return _gl->matrixBlock(); }
+
+inline GLBuffer<GLSL::ConfigBlock>& GLRenderer::configBlock() { return _gl->configBlock(); }
 
 inline GLSL::ShaderProgram* GLRenderer::vertexShader() { return _gl->vertex(); }
 
