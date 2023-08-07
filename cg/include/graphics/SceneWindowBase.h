@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2020, 2022 Paulo Pagliosa.                        |
+//| Copyright (C) 2022, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -29,7 +29,7 @@
 //
 // Author: Paulo Pagliosa
 // Modified by: Felipe Machado
-// Last revision: 17/03/2022
+// Last revision: 01/08/2023
 
 #ifndef __SceneWindowBase_h
 #define __SceneWindowBase_h
@@ -55,7 +55,11 @@ public:
   }
 
 protected:
-  Color _selectedWireframeColor{255, 102, 0};
+  Color _selectedWireframeColor[2]
+  {
+    Color{255, 102, 0}, // parent
+    Color{98, 119, 155, 64} // children
+  };
   bool _showEditorView{true};
   bool _showPreview{true};
 
@@ -73,14 +77,16 @@ protected:
   virtual void beginInitialize();
   virtual void endInitialize();
   virtual void initializeScene();
+  virtual void drawAttachments();
   virtual bool onResize(int, int);
-  virtual bool onPickObject(int, int);
-  virtual bool onPressKey(int);
+  virtual bool onMouseLeftPress(int, int);
+  virtual bool onKeyPress(int, int);
 
   void editorView();
   void preview(Camera&);
-  void showErrorMessage(const char*) const;
+  bool showErrorMessage(const char*) const;
 
+  Material* createMaterial();
   Ray3f makeRay(int, int) const;
 
   static void inspectCamera(Camera&);
@@ -134,7 +140,6 @@ namespace ImGui
 using namespace cg;
 
 void objectNameInput(NameableObject& object);
-
 void inputText(const char* label, const char* text);
 
 inline bool
@@ -169,6 +174,13 @@ colorEdit3(const char* label, Color& color)
 }
 
 bool showStyleSelector(const char* label);
+void tooltip(const char* msg);
+
+inline void
+sectionLabel(const char* label)
+{
+  TextColored({1, 153.0f / 255, 51.0f / 255, 1}, "%s", label);
+}
 
 } // end namespace ImGui
 

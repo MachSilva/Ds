@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2018, 2022 Paulo Pagliosa.                        |
+//| Copyright (C) 2018, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,7 +28,7 @@
 // Source file for generic renderer.
 //
 // Author: Paulo Pagliosa
-// Last revision: 21/01/2022
+// Last revision: 09/06/2023
 
 #include "graphics/Renderer.h"
 
@@ -50,14 +50,14 @@ Renderer::Renderer(SceneBase& scene, Camera& camera):
 void
 Renderer::setScene(SceneBase& scene)
 {
-  if (&scene != _scene)
+  if (&scene != _scene.get())
     _scene = &scene;
 }
 
 void
 Renderer::setCamera(Camera& camera)
 {
-  if (&camera != _camera)
+  if (&camera != _camera.get())
     _camera = &camera;
 }
 
@@ -73,12 +73,6 @@ void
 Renderer::update()
 {
   // do nothing
-}
-
-inline auto
-normalize(const vec4f& p)
-{
-  return vec3f{p} * math::inverse(p.w);
 }
 
 vec3f

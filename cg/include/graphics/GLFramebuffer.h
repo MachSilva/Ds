@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2019, 2022 Paulo Pagliosa.                        |
+//| Copyright (C) 2019, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -29,7 +29,7 @@
 //
 // Author: Paulo Pagliosa
 // Modified by: Felipe Machado
-// Last revision: 17/03/2022
+// Last revision: 30/07/2023
 
 #ifndef __GLFramebuffer_h
 #define __GLFramebuffer_h
@@ -138,6 +138,7 @@ private:
   {
     uint8_t read : 1;
     uint8_t draw : 1;
+
   } _flags{};
 
   GLFramebuffer(const fbo::Description&);
@@ -160,7 +161,7 @@ protected:
   ReadBufferBase(const GLFramebuffer& fbo, uint32_t size):
     _fbo{&fbo}
   {
-    _data = size > 16 ? (buffer = new uint8_t[size]) : &bytes;
+    _data = size > 16 ? (buffer = new uint8_t[size]) : bytes;
     _size = size;
   }
 
@@ -176,13 +177,16 @@ private:
   union
   {
     uint8_t bytes[16];
-    void* buffer;
+    uint8_t* buffer;
   };
-  void* _data;
+  uint8_t* _data;
   const GLFramebuffer* _fbo;
   uint32_t _size;
 
 }; // ReadBufferBase
+
+template <typename>
+inline constexpr bool dependent_false_v = false;
 
 template <typename T>
 class ReadBuffer: public ReadBufferBase
@@ -216,7 +220,9 @@ public:
       return READ(GL_FLOAT);
     else
     {
-      static_assert(false, "Invalid FBO read buffer type");
+      // See dependent_false_v<T> workaround in
+      // https://en.cppreference.com/w/cpp/language/if
+      static_assert(dependent_false_v<T>, "Invalid FBO read buffer type");
       return nullptr;
     }
   }

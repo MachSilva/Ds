@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2020 Paulo Pagliosa.                              |
+//| Copyright (C) 2020, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -23,12 +23,12 @@
 //|                                                                 |
 //[]---------------------------------------------------------------[]
 //
-// OVERVIEW: GLRenderWindow3.h
+// OVERVIEW: GLRenderWindow3.cpp
 // ========
 // Source file for OpenGL 3D render window.
 //
 // Author: Paulo Pagliosa
-// Last revision: 17/05/2022
+// Last revision: 30/07/2023
 
 #include "graphics/GLRenderWindow3.h"
 
@@ -61,9 +61,8 @@ GLRenderWindow3::render()
 }
 
 GLGraphics3*
-GLRenderWindow3::makeRenderer(Camera& camera)
+GLRenderWindow3::makeRenderer(Camera&)
 {
-  (void)camera;
   return new GLGraphics3{};
 }
 
@@ -89,11 +88,10 @@ constexpr auto ZOOM_SCALE = 1.01f;
 }
 
 bool
-GLRenderWindow3::keyInputEvent(int key, int action, int mods)
+GLRenderWindow3::keyInputEvent(int key, int action, int)
 {
   if (ImGui::GetIO().WantCaptureKeyboard || action == GLFW_RELEASE)
     return false;
-  (void)mods;
 
   const auto delta = _camera->distance() * CAMERA_RES;
   auto d = vec3f::null();
@@ -135,11 +133,10 @@ GLRenderWindow3::scrollEvent(double, double yOffset)
 }
 
 bool
-GLRenderWindow3::mouseButtonInputEvent(int button, int actions, int mods)
+GLRenderWindow3::mouseButtonInputEvent(int button, int actions, int)
 {
   if (ImGui::GetIO().WantCaptureMouse)
     return false;
-  (void)mods;
 
   auto active = actions == GLFW_PRESS;
 
@@ -150,14 +147,14 @@ GLRenderWindow3::mouseButtonInputEvent(int button, int actions, int mods)
     _dragFlags.enable(DragBits::Pan, active);
   else if (button == GLFW_MOUSE_BUTTON_LEFT)
     if (active)
-      return onMouseDown(_pivotX, _pivotY);
+      return onMouseLeftPress(_pivotX, _pivotY);
   return true;
 }
 
 bool
 GLRenderWindow3::mouseMoveEvent(double xPos, double yPos)
 {
-  if (!_dragFlags)
+  if (!uint32_t(_dragFlags))
     return false;
   _mouseX = (int)xPos;
   _mouseY = (int)yPos;
@@ -184,7 +181,7 @@ GLRenderWindow3::mouseMoveEvent(double xPos, double yPos)
 }
 
 bool
-GLRenderWindow3::onMouseDown(int, int)
+GLRenderWindow3::onMouseLeftPress(int, int)
 {
   return false;
 }

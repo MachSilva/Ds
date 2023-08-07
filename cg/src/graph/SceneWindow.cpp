@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2020, 2022 Paulo Pagliosa.                        |
+//| Copyright (C) 2020, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -23,35 +23,39 @@
 //|                                                                 |
 //[]---------------------------------------------------------------[]
 //
-// OVERVIEW: SceneWindowBase.cpp
+// OVERVIEW: SceneWindow.cpp
 // ========
 // Source file for generic graph scene window.
 //
 // Author: Paulo Pagliosa
-// Last revision: 26/02/2022
+// Last revision: 30/07/2023
 
 #include "graph/SceneWindow.h"
 #include "graphics/Assets.h"
 #include <cassert>
 
-namespace cg
-{ // begin namespace cg
-
-namespace graph
-{ // begin namespace graph
+namespace cg::graph
+{ // begin namespace cg::graph
 
 
 /////////////////////////////////////////////////////////////////////
 //
 // SceneWindow implementation
 // ===========
+Scene*
+SceneWindow::makeNewScene() const
+{
+  return Scene::New();
+}
+
 SceneBase*
 SceneWindow::makeScene()
 {
-  auto scene = Scene::New();
+  auto scene = makeNewScene();
 
   SceneObjectBuilder::setScene(*scene);
   _currentNode = scene;
+  _editFlags = {true, true};
   return scene;
 }
 
@@ -62,6 +66,7 @@ SceneWindow::setScene(Scene& scene)
   _currentNode = &scene;
   editor()->setScene(scene);
   _viewMode = ViewMode::Editor;
+  _editFlags = {true, true};
 }
 
 void
@@ -79,16 +84,10 @@ SceneWindow::drawComponents(const SceneObject& object)
   // Iterate the object components skipping its transform
   for (auto end = components.end(), cit = ++components.begin(); cit != end;)
   {
-    Component* c{*cit++};
+    const Component* c{*cit++};
+    auto isCurrent = c->sceneObject() == _currentNode;
 
-    if (auto proxy = graph::asLight(c))
-      editor->drawLight(*proxy->light());
-    else if (auto proxy = graph::asCamera(c))
-    {
-      editor->drawCamera(*proxy->camera());
-      preview(*proxy->camera());
-    }
-    else if (auto proxy = graph::asPrimitive(c))
+    if (auto proxy = graph::asPrimitive(c))
     {
       auto p = proxy->mapper()->primitive();
 
@@ -96,10 +95,18 @@ SceneWindow::drawComponents(const SceneObject& object)
       if (auto mesh = p->tesselate())
       {
         editor->setPolygonMode(GLGraphics3::LINE);
-        editor->setMeshColor(_selectedWireframeColor);
+        editor->setMeshColor(_selectedWireframeColor[!isCurrent]);
         editor->drawMesh(*mesh, p->localToWorldMatrix(), p->normalMatrix());
       }
     }
+    else if (isCurrent)
+      if (auto proxy = graph::asLight(c))
+        editor->drawLight(*proxy->light());
+      else if (auto proxy = graph::asCamera(c))
+      {
+        editor->drawCamera(*proxy->camera());
+        preview(*proxy->camera());
+      }
   }
 }
 
@@ -170,7 +177,7 @@ SceneWindow::treeNode(SceneNode node, ImGuiTreeNodeFlags flags)
   if (node == _currentNode)
     flags |= ImGuiTreeNodeFlags_Selected;
 
-  auto open = ImGui::TreeNodeEx(node, flags, node->name());
+  auto open = ImGui::TreeNodeEx(node, flags, "%s", node->name());
 
   if (ImGui::IsItemClicked())
     _currentNode = node;
@@ -182,7 +189,7 @@ SceneWindow::deleteObjectPopup(SceneObject& object)
 {
   auto deleted = false;
 
-  if (ImGui::BeginPopupContextItem())
+  if (editHierarchy() && ImGui::BeginPopupContextItem())
   {
     if (ImGui::MenuItem("Delete###DeleteObject"))
     {
@@ -200,15 +207,12 @@ SceneWindow::deleteObjectPopup(SceneObject& object)
   return deleted;
 }
 
-namespace
-{ // begin namespace
-
 bool
-dropSceneObject(SceneObject& target)
+SceneWindow::dropSceneObject(SceneObject& target)
 {
-  if (ImGui::BeginDragDropTarget() && target.movable())
+  if (editHierarchy() && ImGui::BeginDragDropTarget() && target.movable())
   {
-    if (auto* payload = ImGui::AcceptDragDropPayload("SceneObject"))
+    if (auto payload = ImGui::AcceptDragDropPayload("SceneObject"))
     {
       auto object = *(SceneObject**)payload->Data;
 
@@ -222,8 +226,6 @@ dropSceneObject(SceneObject& target)
   }
   return false;
 }
-
-} // end namespace
 
 bool
 SceneWindow::objectHierarchy(SceneObject& object)
@@ -243,7 +245,7 @@ SceneWindow::objectHierarchy(SceneObject& object)
     {
       auto* data = &child;
 
-      ImGui::Text(child.name());
+      ImGui::Text("%s", child.name());
       ImGui::SetDragDropPayload("SceneObject", &data, sizeof(SceneObject*));
       ImGui::EndDragDropSource();
     }
@@ -270,7 +272,9 @@ SceneWindow::hierarchyWindow(const char* title)
     return;
   assert(title != nullptr);
   ImGui::Begin(title);
+  ImGui::BeginDisabled(!editHierarchy());
   createObjectButton();
+  ImGui::EndDisabled();
   ImGui::Separator();
   if (treeNode(_scene.get(), ImGuiTreeNodeFlags_OpenOnArrow))
   {
@@ -304,7 +308,7 @@ SceneWindow::inspectComponent(Component& component)
 {
   auto typeName = component.typeName();
   auto notDelete{true};
-  auto open = component.erasable() ?
+  auto open = editSceneObjects() && component.erasable() ?
     ImGui::CollapsingHeader(typeName, &notDelete) :
     ImGui::CollapsingHeader(typeName);
 
@@ -312,10 +316,12 @@ SceneWindow::inspectComponent(Component& component)
     component.sceneObject()->removeComponent(typeName);
   else if (open)
   {
-    if (auto transform = graph::asTransform(&component))
-      inspectTransform(*transform);
+    ImGui::BeginDisabled(!editSceneObjects());
+    if (auto t = graph::asTransform(&component))
+      inspectTransform(const_cast<Transform&>(*t));
     else if (auto function = inspectFunction(component))
       function(*this, component);
+    ImGui::EndDisabled();
   }
 }
 
@@ -360,17 +366,15 @@ SceneWindow::inspectLight(SceneWindow&, LightProxy& proxy)
 }
 
 void
-SceneWindow::inspectPrimitive(SceneWindow&, TriangleMeshProxy& proxy)
+SceneWindow::inspectPrimitive(SceneWindow& window, TriangleMeshProxy& proxy)
 {
   ImGui::inputText("Mesh", proxy.meshName());
-  if (ImGui::BeginDragDropTarget())
+  if (window.editSceneObjects() && ImGui::BeginDragDropTarget())
   {
-    if (auto* payload = ImGui::AcceptDragDropPayload("TriangleMesh"))
+    if (auto payload = ImGui::AcceptDragDropPayload("TriangleMesh"))
     {
       auto mit = *(MeshMapIterator*)payload->Data;
-
-      assert(mit->second != nullptr);
-      proxy.setMesh(*mit->second, mit->first);
+      proxy.setMesh(*Assets::loadMesh(mit), mit->first);
     }
     ImGui::EndDragDropTarget();
   }
@@ -388,28 +392,32 @@ SceneWindow::inspectPrimitive(SceneWindow&, TriangleMeshProxy& proxy)
     ImGui::EndPopup();
   }
   ImGui::Separator();
+  window.inspectMaterial(*(proxy.mapper()->primitive()));
+  proxy.actor()->visible = proxy.sceneObject()->visible();
+}
 
-  auto primitive = proxy.mapper()->primitive();
-  auto material = primitive->material();
+void
+SceneWindow::inspectMaterial(Primitive& primitive) const
+{
+  auto material = primitive.material();
 
   ImGui::inputText("Material", material->name());
-  if (ImGui::BeginDragDropTarget())
+  if (editSceneObjects() && ImGui::BeginDragDropTarget())
   {
-    if (auto* payload = ImGui::AcceptDragDropPayload("Material"))
+    if (auto payload = ImGui::AcceptDragDropPayload("Material"))
     {
       auto mit = *(MaterialMapIterator*)payload->Data;
 
       assert(mit->second != nullptr);
-      primitive->setMaterial(material = mit->second);
+      primitive.setMaterial(material = mit->second);
     }
     ImGui::EndDragDropTarget();
   }
-  inspectMaterial(*material);
-  proxy.actor()->visible = proxy.sceneObject()->visible();
+  SceneWindowBase::inspectMaterial(*material);
 }
 
 Component*
-SceneWindow::addComponentMenu()
+SceneWindow::addComponentMenu(const SceneObject&)
 {
   return nullptr;
 }
@@ -417,13 +425,13 @@ SceneWindow::addComponentMenu()
 inline void
 SceneWindow::addComponentButton(SceneObject& object)
 {
-  auto ok = true;
+  static auto ok = true;
 
   if (ImGui::Button("Add Component"))
     ImGui::OpenPopup("AddComponentPopup");
   if (ImGui::BeginPopup("AddComponentPopup"))
   {
-    auto component = addComponentMenu();
+    auto component = addComponentMenu(object);
 
     if (ImGui::MenuItem("Light"))
       component = LightProxy::New();
@@ -434,12 +442,13 @@ SceneWindow::addComponentButton(SceneObject& object)
     ImGui::EndPopup();
   }
   if (!ok)
-    showErrorMessage("Unable to add this component type.");
+    ok = !showErrorMessage("Unable to add this component type.");
 }
 
 inline void
 SceneWindow::inspectSceneObject(SceneObject& object)
 {
+  ImGui::BeginDisabled(!editSceneObjects());
   addComponentButton(object);
   ImGui::Separator();
   ImGui::objectNameInput(object);
@@ -450,6 +459,7 @@ SceneWindow::inspectSceneObject(SceneObject& object)
   ImGui::Checkbox("###visible", &state);
   object.setVisible(state);
   ImGui::Separator();
+  ImGui::EndDisabled();
 
   auto& components = object.components();
 
@@ -457,7 +467,7 @@ SceneWindow::inspectSceneObject(SceneObject& object)
   // is necessary to avoid an exception in case the component is removed
   // by the user during the object inspection)
   for (auto end = components.end(), cit = components.begin(); cit != end;)
-    inspectComponent(*((cit++)->get()));
+    inspectComponent(**cit++);
 }
 
 inline void
@@ -495,31 +505,8 @@ SceneWindow::inspectorWindow(const char* title)
 }
 
 void
-SceneWindow::assetsWindow()
+SceneWindow::materialPanel()
 {
-  if (!_showAssets)
-    return;
-  ImGui::Begin("Assets");
-  if (ImGui::CollapsingHeader("Meshes"))
-  {
-    auto& meshes = Assets::meshes();
-
-    for (auto mit = meshes.begin(); mit != meshes.end(); ++mit)
-    {
-      auto name = mit->first.c_str();
-      auto selected = false;
-
-      ImGui::Selectable(name, &selected);
-      if (ImGui::BeginDragDropSource())
-      {
-        Assets::loadMesh(mit);
-        ImGui::Text(name);
-        ImGui::SetDragDropPayload("TriangleMesh", &mit, sizeof(mit));
-        ImGui::EndDragDropSource();
-      }
-    }
-  }
-  ImGui::Separator();
   if (ImGui::CollapsingHeader("Materials"))
   {
     auto& materials = Assets::materials();
@@ -532,13 +519,43 @@ SceneWindow::assetsWindow()
       ImGui::Selectable(name, &selected);
       if (ImGui::BeginDragDropSource())
       {
-        ImGui::Text(name);
+        ImGui::Text("%s", name);
         ImGui::SetDragDropPayload("Material", &mit, sizeof(mit));
         ImGui::EndDragDropSource();
       }
     }
   }
-  ImGui::End();
+}
+
+void
+SceneWindow::meshPanel()
+{
+  if (ImGui::CollapsingHeader("Meshes"))
+  {
+    auto& meshes = Assets::meshes();
+
+    for (auto mit = meshes.begin(); mit != meshes.end(); ++mit)
+    {
+      auto name = mit->first.c_str();
+      auto selected = false;
+
+      ImGui::Selectable(name, &selected);
+      if (ImGui::BeginDragDropSource())
+      {
+        ImGui::Text("%s", name);
+        ImGui::SetDragDropPayload("TriangleMesh", &mit, sizeof(mit));
+        ImGui::EndDragDropSource();
+      }
+    }
+  }
+}
+
+void
+SceneWindow::assetPanels()
+{
+  materialPanel();
+  ImGui::Separator();
+  meshPanel();
 }
 
 SceneObject*
@@ -549,22 +566,16 @@ SceneWindow::pickObject(SceneObject* object, const Ray3f& ray, float& t) const
 
   SceneObject* nearest{};
 
-  for (auto& component : object->components())
+  for (auto component : object->components())
     if (auto proxy = dynamic_cast<PrimitiveProxy*>(&*component))
     {
       auto p = proxy->mapper()->primitive();
+      Intersection hit;
 
-      if (p->bounds().size().min() == 0)
-        puts("Unable to pick scene object");
-      else
+      if (p->intersect(ray, hit) && hit.distance < t)
       {
-        Intersection hit;
-
-        if (p->intersect(ray, hit) && hit.distance < t)
-        {
-          t = hit.distance;
-          nearest = object;
-        }
+        t = hit.distance;
+        nearest = object;
       }
       break;
     }
@@ -584,7 +595,7 @@ SceneWindow::pickObject(int x, int y) const
 }
 
 bool
-SceneWindow::onPickObject(int x, int y)
+SceneWindow::onMouseLeftPress(int x, int y)
 {
   if (auto o = pickObject(x, y))
     if (o->selectable())
@@ -598,7 +609,7 @@ SceneWindow::onPickObject(int x, int y)
 }
 
 bool
-SceneWindow::onPressKey(int key)
+SceneWindow::onKeyPress(int key, int)
 {
   if (_viewMode != ViewMode::Editor || key != GLFW_KEY_F)
     return false;
@@ -615,6 +626,4 @@ SceneWindow::onPressKey(int key)
   return true;
 }
 
-} // end namespace graph
-
-} // end namespace cg
+} // end namespace cg::graph

@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2022 Paulo Pagliosa.                              |
+//| Copyright (C) 2022, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,7 +28,7 @@
 // Class definition for triangle mesh shape.
 //
 // Author: Paulo Pagliosa
-// Last revision: 28/02/2022
+// Last revision: 21/06/2023
 
 #ifndef __TriangleMeshShape_h
 #define __TriangleMeshShape_h
@@ -40,7 +40,7 @@ namespace cg
 { // begin namespace cg
 
 
-//////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
 //
 // TriangleMeshShape: triangle mesh shape class
 // =================
@@ -65,7 +65,7 @@ protected:
   TriangleMeshBVH* bvh() const;
 
 private:
-  Reference<TriangleMesh>_mesh;
+  Reference<TriangleMesh> _mesh;
   mutable Reference<TriangleMeshBVH> _bvh;
 
   bool localIntersect(const Ray3f&) const final;

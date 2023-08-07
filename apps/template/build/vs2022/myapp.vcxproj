@@ -11,82 +11,30 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\BoxSource.h" />
-    <ClInclude Include="..\..\include\Cell.h" />
-    <ClInclude Include="..\..\include\ConeSource.h" />
-    <ClInclude Include="..\..\include\ContourFilter.h" />
-    <ClInclude Include="..\..\include\CylinderSource.h" />
-    <ClInclude Include="..\..\include\DataArray.h" />
-    <ClInclude Include="..\..\include\DataSet.h" />
-    <ClInclude Include="..\..\include\ElevationFilter.h" />
-    <ClInclude Include="..\..\include\Filter.h" />
-    <ClInclude Include="..\..\include\Glyph3.h" />
-    <ClInclude Include="..\..\include\PointSet.h" />
-    <ClInclude Include="..\..\include\PolyMesh.h" />
-    <ClInclude Include="..\..\include\PolyDataMapper.h" />
-    <ClInclude Include="..\..\include\LookupTable.h" />
-    <ClInclude Include="..\..\include\Mapper.h" />
-    <ClInclude Include="..\..\include\Object.h" />
-    <ClInclude Include="..\..\include\PointLocator.h" />
-    <ClInclude Include="..\..\include\PolyData.h" />
-    <ClInclude Include="..\..\include\PolyMeshMapper.h" />
-    <ClInclude Include="..\..\include\PolyMeshBuilder.h" />
-    <ClInclude Include="..\..\include\SceneWindow.h" />
-    <ClInclude Include="..\..\include\Scalars.h" />
-    <ClInclude Include="..\..\include\Scene.h" />
-    <ClInclude Include="..\..\include\Source.h" />
-    <ClInclude Include="..\..\include\SphereSource.h" />
-    <ClInclude Include="..\..\include\Transform.h" />
-    <ClInclude Include="..\..\include\TransformFilter.h" />
-    <ClInclude Include="..\..\include\TriCell.h" />
-    <ClInclude Include="..\..\include\TriCellMesh.h" />
-    <ClInclude Include="..\..\include\TriCellMeshMapper.h" />
-    <ClInclude Include="..\..\include\TriCellMeshNormals.h" />
-    <ClInclude Include="..\..\include\TriCellMeshReader.h" />
-    <ClInclude Include="..\..\include\Writer.h" />
+    <ClCompile Include="..\..\Main.cpp" />
+    <ClCompile Include="..\..\MainWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\BoxSource.cpp" />
-    <ClCompile Include="..\..\src\ConeSource.cpp" />
-    <ClCompile Include="..\..\src\CylinderSource.cpp" />
-    <ClCompile Include="..\..\src\Glyph3.cpp" />
-    <ClCompile Include="..\..\src\LookupTable.cpp" />
-    <ClCompile Include="..\..\src\Mapper.cpp" />
-    <ClCompile Include="..\..\src\PolyData.cpp" />
-    <ClCompile Include="..\..\src\PolyDataMapper.cpp" />
-    <ClCompile Include="..\..\src\PolyMesh.cpp" />
-    <ClCompile Include="..\..\src\PolyMeshMapper.cpp" />
-    <ClCompile Include="..\..\src\PolyMeshBuilder.cpp" />
-    <ClCompile Include="..\..\src\SceneWindow.cpp" />
-    <ClCompile Include="..\..\src\Scalars.cpp" />
-    <ClCompile Include="..\..\src\Scene.cpp" />
-    <ClCompile Include="..\..\src\Source.cpp" />
-    <ClCompile Include="..\..\src\SphereSource.cpp" />
-    <ClCompile Include="..\..\src\Transform.cpp" />
-    <ClCompile Include="..\..\src\TriCellMeshMapper.cpp" />
-    <ClCompile Include="..\..\src\TriCell.cpp" />
-    <ClCompile Include="..\..\src\TriCellMesh.cpp" />
-    <ClCompile Include="..\..\src\TriCellMeshNormals.cpp" />
-    <ClCompile Include="..\..\src\TriCellMeshReader.cpp" />
+    <ClInclude Include="..\..\MainWindow.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{3FD1D91D-19DF-4C23-AD3C-02A6ECF35FE3}</ProjectGuid>
-    <RootNamespace>cgvis</RootNamespace>
+    <ProjectGuid>{619445A0-D2FF-4DA0-B852-1B7CCF28C127}</ProjectGuid>
+    <RootNamespace>p3</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>cgvis</ProjectName>
+    <ProjectName>myapp</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -103,11 +51,10 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>..\..\lib\</OutDir>
-    <TargetName>$(ProjectName)D</TargetName>
+    <OutDir>$(SolutionDir)..\..\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>..\..\lib\</OutDir>
+    <OutDir>$(SolutionDir)..\..\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -117,8 +64,8 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
-      <AdditionalIncludeDirectories>../../../cg/externals/include;../../../cg/include;../../include</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>.;../../../../cg/externals/include;../../../../cg/include</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>../../../../cg/lib</AdditionalLibraryDirectories>
@@ -127,9 +74,6 @@
       </IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>MSVCRT</IgnoreSpecificDefaultLibraries>
     </Link>
-    <Lib>
-      <OutputFile>../../lib\$(TargetName)$(TargetExt)</OutputFile>
-    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -141,8 +85,8 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
-      <AdditionalIncludeDirectories>../../../cg/externals/include;../../../cg/include;../../include</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>.;../../../../cg/externals/include;../../../../cg/include</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -154,9 +98,6 @@
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
     </Link>
-    <Lib>
-      <OutputFile>../../lib\$(TargetName)$(TargetExt)</OutputFile>
-    </Lib>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

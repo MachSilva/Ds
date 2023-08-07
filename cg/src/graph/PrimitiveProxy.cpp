@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2022 Paulo Pagliosa.                              |
+//| Copyright (C) 2022, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,16 +28,13 @@
 // Source file for primitive proxy.
 //
 // Author: Paulo Pagliosa
-// Last revision: 24/01/2022
+// Last revision: 28/06/2023
 
 #include "graph/PrimitiveProxy.h"
 #include "graph/Scene.h"
 
-namespace cg
-{ // begin namespace cg
-
-namespace graph
-{ // begin namespace graph
+namespace cg::graph
+{ // begin namespace cg::graph
 
 
 /////////////////////////////////////////////////////////////////////
@@ -64,11 +61,13 @@ PrimitiveProxy::beforeRemoved()
 }
 
 void
-PrimitiveProxy::update()
+PrimitiveProxy::transformChanged()
 {
-  if (auto t = transform(); t->changed)
-    if (auto p = _object->primitive())
-      p->setTransform(t->localToWorldMatrix(), t->worldToLocalMatrix());
+  auto t = transform();
+
+  assert(t->changed());
+  if (auto p = _object->primitive())
+    p->setTransform(t->localToWorldMatrix(), t->worldToLocalMatrix());
 }
 
 void
@@ -78,6 +77,4 @@ PrimitiveProxy::setVisible(bool value)
     _actor->visible = value;
 }
 
-} // end namepace graph
-
-} // end namespace cg
+} // end namepace cg::graph

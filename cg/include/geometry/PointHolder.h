@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2019, 2021 Paulo Pagliosa.                        |
+//| Copyright (C) 2019, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,7 +28,7 @@
 // Class definition for point holder.
 //
 // Author: Paulo Pagliosa
-// Last revision: 08/12/2021
+// Last revision: 28/01/2023
 
 #ifndef __PointHolder_h
 #define __PointHolder_h
@@ -38,52 +38,88 @@
 namespace cg
 { // begin namespace cg
 
+template <typename index_t, typename PA>
+inline auto
+activePointFlag(const PA&, index_t)
+{
+  return true;
+}
+
 
 /////////////////////////////////////////////////////////////////////
 //
 // PointHolder: point holder class
 // ===========
-template <typename PointArray>
+template <int D, typename real, typename PA>
 class PointHolder
 {
+private:
+  PA* _points;
+
 public:
-  const auto& points() const
+  template <typename index_t>
+  auto activePoint(index_t index) const
   {
-    return _points;
+    return activePointFlag(*_points, index);
   }
 
-protected:
-  const PointArray& _points;
+  const auto& points() const
+  {
+    return *_points;
+  }
 
-  PointHolder(const PointArray& points):
-    _points(points)
+  auto& points()
+  {
+    return *_points;
+  }
+
+  static Bounds<real, D> computeBounds(const PA& points, bool squared = false);
+
+protected:
+  PointHolder(PA& points):
+    _points{&points}
   {
     // do nothing
   }
 
-  template <int D, typename real>
-  static auto computeBounds(const PointArray& points, bool squared)
+  template <typename P>
+  void setPositions(const P& points)
   {
-    using size_type = decltype(points.size());
+    if (auto n = _points->size(); n != points.size())
+      throw std::logic_error("PointHolder: bad points");
+    else
+      for (decltype(n) i = 0; i < n; ++i)
+        (*_points)[i].set(points[i]);
+  }
 
-    Bounds<real, D> bounds;
-
-    for (size_type n = points.size(), i = 0; i < n; ++i)
-      bounds.inflate(points[i]);
-    if (squared)
-    {
-      auto s = Vector<real, D>{bounds.maxSize() * real(0.5)};
-      auto c = bounds.center();
-
-      bounds.inflate(c - s);
-      bounds.inflate(c + s);
-    }
-    return bounds;
+  void setPoints(PA& points)
+  {
+    _points = &points;
   }
 
 }; // PointHolder
 
+template <int D, typename real, typename PA>
+Bounds<real, D>
+PointHolder<D, real, PA>::computeBounds(const PA& points, bool squared)
+{
+  using size_type = decltype(points.size());
+
+  Bounds<real, D> bounds;
+
+  for (size_type n = points.size(), i = 0; i < n; ++i)
+    bounds.inflate(points[i]);
+  if (squared)
+  {
+    auto s = Vector<real, D>{bounds.maxSize() * real(0.5)};
+    auto c = bounds.center();
+
+    bounds.inflate(c - s);
+    bounds.inflate(c + s);
+  }
+  return bounds;
+}
+
 } // namespace cg
 
 #endif // __PointHolder_h
-

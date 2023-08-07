@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2022 Paulo Pagliosa.                              |
+//| Copyright (C) 2022, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,15 +28,23 @@
 // Class definition for cg demo main window.
 //
 // Author: Paulo Pagliosa
-// Last revision: 08/02/2022
+// Last revision: 19/07/2023
 
 #ifndef __MainWindow_h
 #define __MainWindow_h
 
 #include "graph/SceneWindow.h"
-#include "graphics/Assets.h"
+#include "graphics/AssetFolder.h"
 #include "graphics/GLImage.h"
 #include "RayTracer.h"
+
+namespace cg::graph
+{ // begin namespace cg::graph
+
+class HelixProxy;
+class SweepMeshProxy;
+
+} // end namespace cg::graph
 
 using namespace cg;
 using namespace cg::graph;
@@ -50,12 +58,13 @@ class MainWindow final: public SceneWindow
 {
 public:
   MainWindow(int width, int height):
-    SceneWindow{"Ds Demo Version 1.0", width, height}
+    SceneWindow{"Ds Demo Version 1.3", width, height}
   {
     // do nothing
   }
 
 private:
+  AssetFolderRef _sceneFolder;
   Reference<RayTracer> _rayTracer;
   Reference<GLImage> _image;
   int _maxRecursionLevel{6};
@@ -76,19 +85,25 @@ private:
   void beginInitialize() override;
   void initializeScene() override;
   void renderScene() override;
-  Component* addComponentMenu() override;
-  void createObjectMenu() override;
-  bool onResize(int width, int height) override;
   void gui() override;
+  bool onResize(int width, int height) override;
+  Component* addComponentMenu(const SceneObject&) override;
+  void createObjectMenu() override;
 
   void mainMenu();
   void fileMenu();
+  void viewMenu();
   void createMenu();
   void showOptions();
 
   void readScene(const std::string& filename);
+  void openSceneCommand();
+  void saveScene();
 
   static void buildDefaultMeshes();
+
+  static void inspectHelix(SceneWindow&, HelixProxy&);
+  static void inspectSweepMesh(SceneWindow&, SweepMeshProxy&);
 
 }; // MainWindow
 

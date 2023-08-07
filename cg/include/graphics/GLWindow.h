@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2018, 2020 Paulo Pagliosa.                        |
+//| Copyright (C) 2018, 2022 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,7 +28,7 @@
 // Class definition for OpenGL window.
 //
 // Author: Paulo Pagliosa
-// Last revision: 14/08/2020
+// Last revision: 23/09/2022
 
 #ifndef __GLWindow_h
 #define __GLWindow_h
@@ -39,6 +39,8 @@
 
 namespace cg
 { // begin namespace cg
+
+class Application;
 
 
 /////////////////////////////////////////////////////////////////////
@@ -74,6 +76,17 @@ protected:
 
   /// Constructs an intance of GLWindow.
   GLWindow(const char* title, int width, int height);
+
+  auto argc() const
+  {
+    return _argc;
+  }
+
+  auto argv(int i) const
+  {
+    assert(i >= 0 && i < _argc);
+    return _argv[i];
+  }
 
   // Event handlers.
   virtual bool cursorEnterWindowEvent(int entered);
@@ -135,17 +148,19 @@ protected:
   }
 
 private:
-  std::string _title;
+  GLFWwindow* _window{};
+  char** _argv;
+  int _argc;
   int _width;
   int _height;
-  GLFWwindow* _window{};
-  bool _paused{};
   float _deltaTime{};
+  std::string _title;
+  bool _paused{};
 
   void registerGlfwCallBacks();
   void centerWindow();
   void mainLoop();
-  void show();
+  void show(int, char**);
 
   static void cursorEnterWindowCallBack(GLFWwindow*, int);
   static void mouseMoveCallBack(GLFWwindow*, double, double);
@@ -154,7 +169,7 @@ private:
   static void windowResizeCallBack(GLFWwindow*, int, int);
   static void keyInputCallBack(GLFWwindow*, int, int, int, int);
 
-  friend class Application;
+  friend Application;
 
 }; // GLWindow
 

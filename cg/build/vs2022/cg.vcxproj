@@ -20,13 +20,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -57,7 +57,7 @@
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
       <AdditionalIncludeDirectories>../../externals/include;../../include</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Lib>
@@ -77,7 +77,8 @@
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
       <AdditionalIncludeDirectories>../../externals/include;../../include</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -121,7 +122,7 @@
     <ClInclude Include="..\..\include\geometry\Line.h" />
     <ClInclude Include="..\..\include\geometry\MeshSweeper.h" />
     <ClInclude Include="..\..\include\geometry\Octree.h" />
-    <ClInclude Include="..\..\include\geometry\ParticleSystem.h" />
+    <ClInclude Include="..\..\include\geometry\PointArray.h" />
     <ClInclude Include="..\..\include\geometry\Quad.h" />
     <ClInclude Include="..\..\include\geometry\Point2.h" />
     <ClInclude Include="..\..\include\geometry\Point3.h" />
@@ -140,6 +141,7 @@
     <ClInclude Include="..\..\include\geometry\TriangleMeshBVH.h" />
     <ClInclude Include="..\..\include\graphics\Actor.h" />
     <ClInclude Include="..\..\include\graphics\Application.h" />
+    <ClInclude Include="..\..\include\graphics\AssetFolder.h" />
     <ClInclude Include="..\..\include\graphics\Assets.h" />
     <ClInclude Include="..\..\include\graphics\Camera.h" />
     <ClInclude Include="..\..\include\graphics\Color.h" />
@@ -202,17 +204,16 @@
     <ClCompile Include="..\..\externals\src\imgui_impl_opengl3.cpp" />
     <ClCompile Include="..\..\externals\src\imgui_tables.cpp" />
     <ClCompile Include="..\..\externals\src\imgui_widgets.cpp" />
-    <ClCompile Include="..\..\include\graphics\TriangleMeshMapper.cpp" />
     <ClCompile Include="..\..\src\core\BlockAllocator.cpp" />
     <ClCompile Include="..\..\src\core\NameableObject.cpp" />
     <ClCompile Include="..\..\src\core\Exception.cpp" />
     <ClCompile Include="..\..\src\debug\AnimatedAlgorithm.cpp" />
     <ClCompile Include="..\..\src\geometry\BVH.cpp" />
-    <ClCompile Include="..\..\src\geometry\IndexList.cpp" />
     <ClCompile Include="..\..\src\geometry\MeshSweeper.cpp" />
     <ClCompile Include="..\..\src\geometry\TriangleMesh.cpp" />
     <ClCompile Include="..\..\src\geometry\TriangleMeshBVH.cpp" />
     <ClCompile Include="..\..\src\graphics\Application.cpp" />
+    <ClCompile Include="..\..\src\graphics\AssetFolder.cpp" />
     <ClCompile Include="..\..\src\graphics\Assets.cpp" />
     <ClCompile Include="..\..\src\graphics\Camera.cpp" />
     <ClCompile Include="..\..\src\graphics\Color.cpp" />
@@ -240,6 +241,7 @@
     <ClCompile Include="..\..\src\graphics\SceneWindowBase.cpp" />
     <ClCompile Include="..\..\src\graphics\Shape.cpp" />
     <ClCompile Include="..\..\src\graphics\TransformableObject.cpp" />
+    <ClCompile Include="..\..\src\graphics\TriangleMeshMapper.cpp" />
     <ClCompile Include="..\..\src\graphics\TriangleMeshShape.cpp" />
     <ClCompile Include="..\..\src\graph\CameraProxy.cpp" />
     <ClCompile Include="..\..\src\graph\Component.cpp" />
@@ -249,7 +251,10 @@
     <ClCompile Include="..\..\src\graph\SceneObjectBuilder.cpp" />
     <ClCompile Include="..\..\src\graph\SceneWindow.cpp" />
     <ClCompile Include="..\..\src\graph\Transform.cpp" />
-    <ClCompile Include="..\..\src\utils\MeshReader.cpp" />
+    <ClCompile Include="..\..\src\utils\MeshReader.cpp">
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">/D_CRT_SECURE_NO_WARNINGS %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">/D_CRT_SECURE_NO_WARNINGS %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

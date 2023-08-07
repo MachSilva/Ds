@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2018, 2022 Paulo Pagliosa.                        |
+//| Copyright (C) 2018, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,7 +28,7 @@
 // Class definition for scene object component.
 //
 // Author: Paulo Pagliosa
-// Last revision: 10/02/2022
+// Last revision: 18/07/2023
 
 #ifndef __SceneObjectComponent_h
 #define __SceneObjectComponent_h
@@ -36,11 +36,8 @@
 #include "core/SharedObject.h"
 #include <string>
 
-namespace cg
-{ // begin namespace cg
-
-namespace graph
-{ // begin namespace graph
+namespace cg::graph
+{ // begin namespace cg::graph
 
 class SceneObject;
 class Transform;
@@ -71,35 +68,51 @@ public:
   /// Returns true if this component is erasable.
   auto erasable() const
   {
-    return _erasable;
+    return _flags.erasable;
+  }
+
+  /// Returns true if this component is transformable.
+  auto transformable() const
+  {
+    return _flags.transformable;
   }
 
 protected:
   Component(const char* const typeName, bool erasable = true):
     _typeName{typeName},
-    _erasable{erasable}
+    _flags{erasable, true}
   {
     // do nothing
   }
 
-  virtual bool canBeSiblingOf(Component* component) const;
+  virtual bool canAdd(Component* other) const;
 
   virtual void afterAdded();
   virtual void beforeRemoved();
-  virtual void update();
+  virtual void transformChanged();
   virtual void setVisible(bool value);
+  virtual bool tryConnectingTo(Component* other);
+  virtual bool tryDisconnectingFrom(Component* other);
+
+  void setTransformable(bool value)
+  {
+    _flags.transformable = value;
+  }
 
 private:
   const std::string _typeName;
   SceneObject* _sceneObject{};
-  bool _erasable;
+  struct
+  {
+    bool erasable : 1;
+    bool transformable : 1;
+
+  } _flags;
 
   friend class SceneObject;
 
 }; // Component
 
-} // end namepace graph
-
-} // end namespace cg
+} // end namepace cg::graph
 
 #endif // __SceneObjectComponent_h

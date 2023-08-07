@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2018, 2020 Paulo Pagliosa.                        |
+//| Copyright (C) 2018, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -29,7 +29,7 @@
 //
 // Author: Paulo Pagliosa
 // Modified by: Felipe Machado
-// Last revision: 17/03/2022
+// Last revision: 30/07/2023
 
 #ifndef __AllocableObject_h
 #define __AllocableObject_h
@@ -78,7 +78,7 @@ public:
   {
 #ifdef _DEBUG
     if (size != sizeof(T))
-      throw std::logic_error("Object bad size");
+      throw std::logic_error{"Object bad size"};
 #endif // _DEBUG
     (void)size;
     return allocator::allocate();

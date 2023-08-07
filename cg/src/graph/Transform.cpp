@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2018, 2022 Paulo Pagliosa.                        |
+//| Copyright (C) 2018, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,15 +28,12 @@
 // Source file for scene object transform.
 //
 // Author: Paulo Pagliosa
-// Last revision: 22/01/2022
+// Last revision: 28/06/2023
 
 #include "graph/SceneObject.h"
 
-namespace cg
-{ // begin namespace cg
-
-namespace graph
-{ // begin namespace graph
+namespace cg::graph
+{ // begin namespace cg::graph
 
 template <typename real>
 inline Matrix4x4<real>
@@ -174,7 +171,7 @@ Transform::update()
   _position = translation(_localToWorld);
   _rotation = p->_rotation * _localRotation;
   _worldToLocal = inverseLocalMatrix() * p->_worldToLocal;
-  changed = true;
+  setChanged(true);
   sceneObject()->transformChanged();
 }
 
@@ -190,7 +187,7 @@ Transform::parentChanged()
   _localScale = scale(_localRotation, m);
   _localToWorld = p->_localToWorld * localMatrix();
   _worldToLocal = inverseLocalMatrix() * p->_worldToLocal;
-  changed = true;
+  setChanged(true);
   sceneObject()->transformChanged();
 }
 
@@ -208,6 +205,4 @@ Transform::print(FILE* out) const
   _worldToLocal.print("World to Local Matrix:", out);
 }
 
-} // end namespace graph
-
-} // end namespace cg
+} // end namespace cg::graph

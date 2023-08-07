@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2021, 2022 Paulo Pagliosa.                        |
+//| Copyright (C) 2021, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,7 +28,7 @@
 // Class for generic array.
 //
 // Author: Paulo Pagliosa
-// Last revision: 10/02/2022
+// Last revision: 19/07/2023
 
 #ifndef __Array_h
 #define __Array_h
@@ -71,7 +71,7 @@ public:
   {
 #ifdef _DEBUG
     if (_index >= _array->size())
-      throw std::logic_error("Array iterator not incrementable");
+      throw std::logic_error{"Array iterator not incrementable"};
 #endif // _DEBUG
     ++_index;
     return *this;
@@ -89,7 +89,7 @@ public:
   {
 #ifdef _DEBUG
     if (_index == 0)
-      throw std::logic_error("Array iterator not decrementable");
+      throw std::logic_error{"Array iterator not decrementable"};
 #endif // _DEBUG
     --_index;
     return *this;
@@ -107,7 +107,7 @@ public:
   {
 #ifdef _DEBUG
     if (_index >= _array->size())
-      throw std::logic_error("Array iterator not dereferencable");
+      throw std::logic_error{"Array iterator not dereferencable"};
 #endif // _DEBUG
     return (*_array)[_index];
   }
@@ -153,7 +153,7 @@ public:
     // do nothing
   }
 
-  ArrayBase(base_type&& other):
+  ArrayBase(base_type&& other) noexcept:
     _data{other._data},
     _size{other._size}
   {
@@ -249,7 +249,7 @@ public:
     {
 #ifdef _DEBUG
       if (this->_size != other._size)
-        throw std::logic_error("Bad array size");
+        throw std::logic_error{"Bad array size"};
 #endif // _DEBUG
       memcpy(this->_data, other._data, this->_size * sizeof(T));
     }
@@ -266,7 +266,7 @@ public:
   {
 #ifdef _DEBUG
     if (index >= this->_size)
-      throw std::logic_error("Array index out of bounds");
+      throw std::logic_error{"Array index out of bounds"};
 #endif // _DEBUG
     return this->_data[index];
   }
@@ -275,7 +275,7 @@ public:
   {
 #ifdef _DEBUG
     if (index >= this->_size)
-      throw std::logic_error("Array index out of bounds");
+      throw std::logic_error{"Array index out of bounds"};
 #endif // _DEBUG
     return this->_data[index];
   }

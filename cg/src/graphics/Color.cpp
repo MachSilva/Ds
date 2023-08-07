@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2014, 2018 Paulo Pagliosa.                        |
+//| Copyright (C) 2014, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,7 +28,7 @@
 // Source file for RGB color.
 //
 // Author: Paulo Pagliosa
-// Last revision: 01/08/2018
+// Last revision: 30/07/2023
 
 #include "graphics/Color.h"
 
@@ -40,23 +40,25 @@ namespace cg
 //
 // Color implementation
 // =====
-Color Color::black(0, 0, 0);
-Color Color::red(255, 0, 0);
-Color Color::green(0, 255, 0);
-Color Color::blue(0, 0, 255);
-Color Color::cyan(0, 255, 255);
-Color Color::magenta(255, 0, 255);
-Color Color::yellow(255, 255, 0);
-Color Color::white(255, 255, 255);
-Color Color::darkGray(136, 136, 136);
-Color Color::gray(194, 194, 194);
+Color Color::black{0, 0, 0};
+Color Color::red{255, 0, 0};
+Color Color::green{0, 255, 0};
+Color Color::blue{0, 0, 255};
+Color Color::cyan{0, 255, 255};
+Color Color::magenta{255, 0, 255};
+Color Color::yellow{255, 255, 0};
+Color Color::white{255, 255, 255};
+Color Color::darkGray{136, 136, 136};
+Color Color::gray{194, 194, 194};
 
 Color
-Color::HSV2RGB(float hue, float saturation, float value)
+Color::HSV2RGB(float hue, float saturation, float value, float alpha)
 {
+  Color color;
+
+  color.a = alpha;
   hue = hue - 360 * int(hue * math::inverse<float>(360));
 
-  Color color;
   auto f = int(hue * math::inverse<float>(120));
   auto d = (hue - 120 * f) * math::inverse<float>(60);
 

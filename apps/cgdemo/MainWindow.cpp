@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2022 Paulo Pagliosa.                              |
+//| Copyright (C) 2022, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,10 +28,12 @@
 // Source file for cg demo main window.
 //
 // Author: Paulo Pagliosa
-// Last revision: 11/03/2022
+// Last revision: 13/07/2023
 
 #include "graphics/Application.h"
+#include "graphics/AssetFolder.h"
 #include "reader/SceneReader.h"
+#include "SceneWriter.h"
 #include "MainWindow.h"
 
 
@@ -48,7 +50,7 @@ MainWindow::buildDefaultMeshes()
   _defaultMeshes["Sphere"] = GLGraphics3::sphere();
   _defaultMeshes["Cylinder"] = GLGraphics3::cylinder();
   _defaultMeshes["Cone"] = GLGraphics3::cone();
-  //_defaultMeshes["Plane"] = GLGraphics3::quad();
+  _defaultMeshes["Plane"] = GLGraphics3::quad();
 }
 
 void
@@ -66,14 +68,14 @@ MainWindow::initializeScene()
 void
 MainWindow::beginInitialize()
 {
-  Assets::initialize();
-  buildDefaultMeshes();
-  Assets::meshes().insert(_defaultMeshes.begin(), _defaultMeshes.end());
-
   constexpr auto ffn = "fonts/Roboto-Regular.ttf";
   auto fonts = ImGui::GetIO().Fonts;
 
   fonts->AddFontFromFileTTF(Application::assetFilePath(ffn).c_str(), 16);
+  buildDefaultMeshes();
+  Assets::initialize();
+  Assets::meshes().insert(_defaultMeshes.begin(), _defaultMeshes.end());
+  _sceneFolder = AssetFolder::New("scenes/", ".scn");
 }
 
 void
@@ -89,14 +91,14 @@ MainWindow::createObjectMenu()
       createDefaultPrimitiveObject("Cylinder");
     if (ImGui::MenuItem("Cone"))
       createDefaultPrimitiveObject("Cone");
-    //if (ImGui::MenuItem("Plane"))
-      //createDefaultPrimitiveObject("Plane");
+    if (ImGui::MenuItem("Plane"))
+      createDefaultPrimitiveObject("Plane");
     ImGui::EndMenu();
   }
 }
 
 Component*
-MainWindow::addComponentMenu()
+MainWindow::addComponentMenu(const SceneObject&)
 {
   Component* component = nullptr;
 
@@ -110,28 +112,63 @@ MainWindow::addComponentMenu()
       component = makeDefaultPrimitive("Cylinder");
     if (ImGui::MenuItem("Cone"))
       component = makeDefaultPrimitive("Cone");
-    //if (ImGui::MenuItem("Plane"))
-      //component = makeDefaultPrimitive("Plane");
+    if (ImGui::MenuItem("Plane"))
+      component = makeDefaultPrimitive("Plane");
     ImGui::EndMenu();
   }
   return component;
 }
 
 void
-MainWindow::readScene(const std::string& filename)
+MainWindow::openSceneCommand()
 {
-  try
+  if (ImGui::BeginListBox("##SceneList",
+    ImVec2{180, 8 * ImGui::GetTextLineHeightWithSpacing()}))
   {
-    parser::SceneReader reader;
+    for (auto& file : _sceneFolder->files())
+      if (ImGui::Selectable(file->filename().c_str()))
+      {
+        auto filename = (_sceneFolder->path() / file->name()).string();
 
-    reader.setInput(filename);
-    reader.execute();
-    if (reader.scene() != nullptr)
-      SceneWindow::setScene(*reader.scene());
+        readScene(filename);
+        ImGui::CloseCurrentPopup();
+      }
+    ImGui::EndListBox();
   }
-  catch (const std::exception& e)
+}
+
+void
+MainWindow::readScene(const std::string& filename) try
+{
+  util::SceneReader reader;
+
+  reader.setInput(filename);
+  reader.execute();
+  if (reader.scene() != nullptr)
   {
-    puts(e.what());
+    SceneWindow::setScene(*reader.scene());
+
+    auto& materials = Assets::materials();
+
+    for (const auto& [name, m] : reader.materials)
+      materials[name] = m;
+  }
+}
+catch (const std::exception& e)
+{
+  puts(e.what());
+}
+
+void
+MainWindow::saveScene()
+{
+  if (auto name = scene()->name(); *name)
+  {
+    auto filename = std::string{name} + ".scn";
+    auto path = (_sceneFolder->path() / filename).string();
+
+    util::SceneWriter{path.c_str()}.write(*scene());
+    _sceneFolder->addFile(filename.c_str());
   }
 }
 
@@ -144,11 +181,12 @@ MainWindow::fileMenu()
       newScene();
     if (ImGui::BeginMenu("Open"))
     {
-      // TODO
-      if (ImGui::MenuItem("test.scn"))
-        readScene(Application::assetFilePath("scenes/test.scn"));
+      openSceneCommand();
       ImGui::EndMenu();
     }
+    ImGui::Separator();
+    if (ImGui::MenuItem("Save"))
+      saveScene();
     ImGui::Separator();
     if (ImGui::MenuItem("Exit", "Alt+F4"))
     {
@@ -159,8 +197,36 @@ MainWindow::fileMenu()
 }
 
 inline void
+MainWindow::viewMenu()
+{
+  if (ImGui::BeginMenu("View"))
+  {
+    static const char* viewLabels[]{"Editor", "Ray Tracer"};
+
+    if (ImGui::BeginCombo("View", viewLabels[(int)_viewMode]))
+    {
+      for (auto i = 0; i < IM_ARRAYSIZE(viewLabels); ++i)
+        if (ImGui::Selectable(viewLabels[i], _viewMode == (ViewMode)i))
+          _viewMode = (ViewMode)i;
+      ImGui::EndCombo();
+      // TODO: change mode only if scene has changed
+      if (_viewMode == ViewMode::Editor)
+        _image = nullptr;
+    }
+    ImGui::Separator();
+    ImGui::MenuItem("Hierarchy Window", nullptr, &_showHierarchy);
+    ImGui::MenuItem("Inspector Window", nullptr, &_showInspector);
+    ImGui::MenuItem("Camera Preview", nullptr, &_showPreview);
+    ImGui::MenuItem("Assets Window", nullptr, &_showAssets);
+    ImGui::MenuItem("Editor View Settings", nullptr, &_showEditorView);
+    ImGui::EndMenu();
+  }
+}
+
+inline void
 MainWindow::createMenu()
 {
+  ImGui::BeginDisabled(!editHierarchy());
   if (ImGui::BeginMenu("Create"))
   {
     if (ImGui::MenuItem("Material"))
@@ -169,6 +235,7 @@ MainWindow::createMenu()
     createObjectMenu();
     ImGui::EndMenu();
   }
+  ImGui::EndDisabled();
 }
 
 inline void
@@ -176,7 +243,8 @@ MainWindow::showOptions()
 {
   ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.6f);
   ImGui::showStyleSelector("Color Theme##Selector");
-  ImGui::colorEdit3("Selected Wireframe", _selectedWireframeColor);
+  ImGui::colorEdit3("Selected Wireframe", _selectedWireframeColor[0]);
+  ImGui::colorEdit3("Selected Children Wireframe", _selectedWireframeColor[1]);
   ImGui::PopItemWidth();
 }
 
@@ -187,30 +255,7 @@ MainWindow::mainMenu()
   {
     fileMenu();
     createMenu();
-    if (ImGui::BeginMenu("View"))
-    {
-      static const char* viewLabels[]{"Editor", "Ray Tracer"};
-
-      if (ImGui::BeginCombo("View", viewLabels[(int)_viewMode]))
-      {
-        for (auto i = 0; i < IM_ARRAYSIZE(viewLabels); ++i)
-        {
-          if (ImGui::Selectable(viewLabels[i], _viewMode == (ViewMode)i))
-            _viewMode = (ViewMode)i;
-        }
-        ImGui::EndCombo();
-        // TODO: change mode only if scene has changed
-        if (_viewMode == ViewMode::Editor)
-          _image = nullptr;
-      }
-      ImGui::Separator();
-      ImGui::MenuItem("Hierarchy Window", nullptr, &_showHierarchy);
-      ImGui::MenuItem("Inspector Window", nullptr, &_showInspector);
-      ImGui::MenuItem("Camera Preview", nullptr, &_showPreview);
-      ImGui::MenuItem("Assets Window", nullptr, &_showAssets);
-      ImGui::MenuItem("Editor View Settings", nullptr, &_showEditorView);
-      ImGui::EndMenu();
-    }
+    viewMenu();
     if (ImGui::BeginMenu("Ray Tracing"))
     {
       ImGui::DragInt("Max Recursion Level",
@@ -274,7 +319,7 @@ MainWindow::gui()
   // Assets Window
   ImGui::SetNextWindowPos({rgt, awy});
   ImGui::SetNextWindowSize({iww, awh});
-  assetsWindow();
+  assetWindow();
 }
 
 void

@@ -23,48 +23,27 @@
 //|                                                                 |
 //[]---------------------------------------------------------------[]
 //
-// OVERVIEW: TriangleMeshMapper.cpp
+// OVERVIEW: Main.cpp
 // ========
-// Source file for triangle mesh mapper.
+// Main function for cg template.
 //
 // Author: Paulo Pagliosa
-// Last revision: 21/01/2022
+// Last revision: 07/11/2022
 
-#include "graphics/GLRenderer.h"
-#include "graphics/TriangleMeshMapper.h"
+#include "graphics/Application.h"
+#include "MainWindow.h"
 
-namespace cg
-{ // begin namespace cg
-
-
-/////////////////////////////////////////////////////////////////////
-//
-// TriangleMeshMapper implementation
-// ==================
-TriangleMeshMapper::TriangleMeshMapper(const TriangleMesh& mesh):
-  _mesh{&mesh},
-  _shape{new TriangleMeshShape{mesh}}
+int
+main(int argc, char** argv)
 {
-  _primitive = new ShapeInstance{*_shape};
+  puts("Ds template by Paulo Pagliosa (ppagliosa@gmail.com)\n");
+  puts("Camera controls keys:\n"
+    "(w) move forward  (s) move backward\n"
+    "(a) move left     (d) move right\n"
+    "(q) move up       (z) move down\n");
+  puts("Mouse controls:\n"
+    "(scroll wheel)    zoom\n"
+    "(middle-click)    pan\n"
+    "(Alt+right-click) rotate");
+  return cg::Application{new MainWindow{1280, 720}}.run(argc, argv);
 }
-
-void
-TriangleMeshMapper::setMesh(const TriangleMesh& mesh)
-{
-  _shape->setMesh(mesh);
-}
-
-bool
-TriangleMeshMapper::render(GLRenderer& renderer) const
-{
-  renderer.drawMesh(*_primitive);
-  return true;
-}
-
-Primitive*
-TriangleMeshMapper::primitive() const
-{
-  return _primitive;
-}
-
-} // end namespace cg

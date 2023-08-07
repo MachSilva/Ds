@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2020, 2022 Paulo Pagliosa.                        |
+//| Copyright (C) 2020, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,8 +28,10 @@
 // Source file for scene window base.
 //
 // Author: Paulo Pagliosa
-// Last revision: 26/02/2022
+// Last revision: 01/08/2023
 
+#include "graphics/Assets.h"
+#include "graphics/Renderer.h"
 #include "graphics/SceneWindowBase.h"
 
 namespace ImGui
@@ -80,6 +82,20 @@ showStyleSelector(const char* label)
   return true;
 }
 
+void
+tooltip(const char* msg)
+{
+  TextDisabled("(?)");
+  if (IsItemHovered())
+  {
+    BeginTooltip();
+    PushTextWrapPos(GetFontSize() * 35.0f);
+    TextUnformatted(msg);
+    PopTextWrapPos();
+    EndTooltip();
+  }
+}
+
 } // end namespace ImGui
 
 namespace cg
@@ -108,6 +124,7 @@ SceneWindowBase::initialize()
   glEnable(GL_POLYGON_OFFSET_FILL);
   glPolygonOffset(1.0f, 1.0f);
   glEnable(GL_LINE_SMOOTH);
+  glEnable(GL_MULTISAMPLE);
   endInitialize();
   initializeScene();
 }
@@ -116,6 +133,7 @@ void
 SceneWindowBase::render()
 {
   _editor->render();
+  drawAttachments();
   _editor->drawGround();
 }
 
@@ -147,6 +165,11 @@ SceneWindowBase::initializeScene()
   // do nothing
 }
 
+void
+SceneWindowBase::drawAttachments()
+{
+  // do nothing
+}
 
 bool
 SceneWindowBase::onResize(int width, int height)
@@ -157,7 +180,7 @@ SceneWindowBase::onResize(int width, int height)
 }
 
 bool
-SceneWindowBase::onPickObject(int x, int y)
+SceneWindowBase::onMouseLeftPress(int x, int y)
 {
   (void)x;
   (void)y;
@@ -165,9 +188,10 @@ SceneWindowBase::onPickObject(int x, int y)
 }
 
 bool
-SceneWindowBase::onPressKey(int key)
+SceneWindowBase::onKeyPress(int key, int mods)
 {
   (void)key;
+  (void)mods;
   return false;
 }
 
@@ -208,6 +232,9 @@ SceneWindowBase::editorView()
     ImGui::colorEdit3("Edges", edgeColor);
     ImGui::SameLine();
     ImGui::Checkbox("###showEdges", &showEdges);
+    _editor->renderMode = showEdges ?
+      GLRenderer::RenderMode::HiddenLines :
+      GLRenderer::RenderMode::Smooth;
   }
   ImGui::Separator();
   ImGui::Checkbox("Show Ground", &_editor->showGround);
@@ -250,6 +277,7 @@ SceneWindowBase::preview(Camera& camera)
 
     _editor->setCamera(camera);
     _editor->render();
+    drawAttachments();
     _editor->setCamera(*ec);
     // Update to continue drawing in the same frame
     _editor->update();
@@ -260,20 +288,27 @@ SceneWindowBase::preview(Camera& camera)
   ImGui::End();
 }
 
-void
+bool
 SceneWindowBase::showErrorMessage(const char* message) const
 {
+  auto open = false;
+
   ImGui::OpenPopup("Error Message");
   if (ImGui::BeginPopupModal("Error Message",
     nullptr,
     ImGuiWindowFlags_AlwaysAutoResize))
   {
-    ImGui::Text(message);
+    open = true;
+    ImGui::Text("%s", message);
     ImGui::Separator();
     if (ImGui::Button("Close"))
+    {
       ImGui::CloseCurrentPopup();
+      open = false;
+    }
     ImGui::EndPopup();
   }
+  return open;
 }
 
 bool
@@ -309,7 +344,7 @@ SceneWindowBase::mouseButtonInputEvent(int button, int actions, int mods)
 
   cursorPosition(_mouse.px, _mouse.py);
   if (button == GLFW_MOUSE_BUTTON_LEFT && !active)
-    return onPickObject(_mouse.px, _mouse.py);
+    return onMouseLeftPress(_mouse.px, _mouse.py);
   if (button == GLFW_MOUSE_BUTTON_RIGHT)
     _dragFlags.enable(DragBits::Rotate, active);
   else if (button == GLFW_MOUSE_BUTTON_MIDDLE)
@@ -320,7 +355,7 @@ SceneWindowBase::mouseButtonInputEvent(int button, int actions, int mods)
 bool
 SceneWindowBase::mouseMoveEvent(double xPos, double yPos)
 {
-  if (!_dragFlags)
+  if (!uint32_t(_dragFlags))
     return false;
   _mouse.cx = (int)xPos;
   _mouse.cy = (int)yPos;
@@ -379,7 +414,7 @@ SceneWindowBase::keyInputEvent(int key, int action, int mods)
       d.y -= delta;
       break;
     default:
-      return onPressKey(key);
+      return onKeyPress(key, mods);
   }
   _editor->pan(d);
   return true;
@@ -387,12 +422,6 @@ SceneWindowBase::keyInputEvent(int key, int action, int mods)
 
 namespace
 { // begin namespace
-
-inline auto
-normalize(const vec4f& p)
-{
-  return vec3f{p} *math::inverse(p.w);
-}
 
 inline auto
 viewportToNDC(int x, int y)
@@ -408,6 +437,17 @@ viewportToNDC(int x, int y)
 }
 
 } // end namespace
+
+Material*
+SceneWindowBase::createMaterial()
+{
+  auto& map = Assets::materials();
+  auto material = new Material{Color::white};
+
+  material->setName("Material %d", int(map.size()));
+  map.emplace(material->name(), material);
+  return material;
+}
 
 Ray3f
 SceneWindowBase::makeRay(int x, int y) const
@@ -455,8 +495,7 @@ SceneWindowBase::inspectCamera(Camera& camera)
       &fov,
       Camera::minAngle,
       Camera::maxAngle,
-      "%.0f deg",
-      1.0f))
+      "%.0f deg"))
       camera.setViewAngle(fov);
   }
   else
@@ -564,8 +603,7 @@ SceneWindowBase::inspectLight(Light& light)
     &angle,
     Light::minSpotAngle,
     Light::maxSpotAngle,
-    "%.0f deg",
-    1.0f))
+    "%.0f deg"))
     light.setSpotAngle(angle);
 }
 
@@ -577,6 +615,8 @@ SceneWindowBase::inspectMaterial(Material& material)
   ImGui::colorEdit3("Spot", material.spot);
   ImGui::DragFloat("Shine", &material.shine, 1, 1, 1000);
   ImGui::colorEdit3("Specular", material.specular);
+  ImGui::colorEdit3("Transparency", material.transparency);
+  ImGui::DragFloat("IOR", &material.ior, 0.01f, 1, 5);
 }
 
 } // end namespace cg

@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2007, 2022 Paulo Pagliosa.                        |
+//| Copyright (C) 2007, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -25,11 +25,11 @@
 //
 // OVERVIEW: ErrorHandler.cpp
 // ========
-//  Source file for generic error handler.
+// Source file for generic error handler.
 //
 // Author: Paulo Pagliosa
 // Modified by: Felipe Machado
-// Last revision: 17/03/2022
+// Last revision: 15/05/2023
 
 #include "ErrorHandler.h"
 #include <cstdio>
@@ -66,7 +66,7 @@ ErrorHandler::findErrorMessage(int) const
 void
 ErrorHandler::throwErrorMessage(const char* msg) const
 {
-  throw std::runtime_error(msg);
+  throw std::runtime_error{msg};
 }
 
 void
@@ -92,7 +92,7 @@ ErrorHandler::error(int code, const char* arg) const
 inline const char*
 ErrorHandler::errorMessage(int code) const
 {
-  auto* msg = findErrorMessage(code);
+  auto msg = findErrorMessage(code);
   return nullptr == msg ? "undefined error code" : msg;
 }
 

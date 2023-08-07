@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2014, 2022 Paulo Pagliosa.                        |
+//| Copyright (C) 2014, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -29,7 +29,7 @@
 //
 // Author: Paulo Pagliosa
 // Modified by: Felipe Machado
-// Last revision: 17/03/2022
+// Last revision: 17/07/2023
 
 #include "utils/MeshReader.h"
 #include <cstring>
@@ -42,9 +42,6 @@
 
 namespace cg
 { // begin namespace cg
-
-namespace internal
-{ // begin namespace internal
 
 bool
 readInt2(std::istream& in, int skip, int &a, int &b)
@@ -267,9 +264,6 @@ readMeshData(std::fstream& file, TriangleMesh::Data& data)
   if (file.fail()) file.clear();
 }
 
-} // end namespace internal
-
-
 /////////////////////////////////////////////////////////////////////
 //
 // MeshReader implementation
@@ -284,13 +278,13 @@ MeshReader::readOBJ(const char* filename)
 
   TriangleMesh::Data data;
 
-  internal::readMeshSize(file, data);
+  readMeshSize(file, data);
   data.vertices = new vec3f[data.vertexCount];
   data.vertexNormals = nullptr;
   data.triangles = new TriangleMesh::Triangle[data.triangleCount];
   file.seekg(std::ios::beg);
   printf("Reading Wavefront OBJ file %s...\n", filename);
-  internal::readMeshData(file, data);
+  readMeshData(file, data);
 
   auto mesh = new TriangleMesh{std::move(data)};
 

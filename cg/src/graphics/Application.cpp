@@ -29,19 +29,17 @@
 //
 // Author: Paulo Pagliosa
 // Modified by: Felipe Machado
-// Last revision: 12/07/2022
+// Last revision: 14/12/2022
 
+#include "core/Exception.h"
 #include "graphics/Application.h"
-#include <cstdarg>
-#include <cstdio>
 #include <filesystem>
-#include <stdexcept>
 
 namespace cg
 { // begin namespace cg
 
-namespace internal
-{ // begin namespace internal
+namespace internal::app
+{ // begin namespace internal::app
 
 static int glfwInitialized;
 
@@ -53,7 +51,7 @@ errorCallback(int error, const char* description)
   // See:
   // - https://github.com/glfw/glfw/issues/1121
   // - https://www.glfw.org/docs/latest/intro_guide.html#error_handling
-  printf("[GLFW 0x%x] %s\n", error, description);
+  runtimeError("[GLFW 0x%x] %s\n", error, description);
 }
 
 inline auto
@@ -63,7 +61,7 @@ maxWindowSize()
   auto monitors = glfwGetMonitors(&monitorCount);
 
   if (monitorCount == 0)
-    Application::error("No monitors found");
+    runtimeError("No monitor found");
 
   struct { int w, h; } size{};
 
@@ -101,7 +99,7 @@ terminateGlfw()
   }
 }
 
-} // end namespace internal
+} // end namespace internal::app
 
 
 /////////////////////////////////////////////////////////////////////
@@ -116,31 +114,31 @@ Application::~Application()
 {
   delete _mainWindow;
   if (--_count == 0)
-    internal::terminateGlfw();
+    internal::app::terminateGlfw();
 }
 
 Application::Application(GLWindow* mainWindow):
-  _id{++_count},
-  _mainWindow{mainWindow}
+  _mainWindow{mainWindow},
+  _id{++_count}
 {
   // do nothing
 }
-
-namespace fs = std::filesystem;
 
 int
 Application::run(int argc, char** argv)
 {
   try
   {
+    namespace fs = std::filesystem;
+
     if (_mainWindow == nullptr)
-      error("Undefined main window");
+      runtimeError("Undefined main window");
     if (_count == 1)
     {
-      if (!internal::initializeGlfw())
-        error("Unable to initialize GLFW");
+      if (!internal::app::initializeGlfw())
+        runtimeError("Unable to initialize GLFW");
       if (glfwGetPrimaryMonitor() == nullptr)
-        error("No monitors found");
+        runtimeError("No monitors found");
     }
     if (_assetsPath.empty())
     {
@@ -149,8 +147,7 @@ Application::run(int argc, char** argv)
       _baseDirectory = basePath.empty() ? "./" : basePath.string() + '/';
       _assetsPath = _baseDirectory + "assets/";
     }
-    (void)argc;
-    _mainWindow->show();
+    _mainWindow->show(argc - 1, argv + 1);
     return EXIT_SUCCESS;
   }
   catch (const std::exception& e)
@@ -159,18 +156,6 @@ Application::run(int argc, char** argv)
     (void)getchar();
     return EXIT_FAILURE;
   }
-}
-
-void
-Application::error(const char* format, ...)
-{
-  constexpr auto bufferSize = 4096;
-  char buffer[bufferSize];
-  va_list args;
-
-  va_start(args, format);
-  std::vsnprintf(buffer, bufferSize, format, args);
-  throw std::runtime_error{buffer};
 }
 
 } // end namespace cg

@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2014, 2019 Paulo Pagliosa.                        |
+//| Copyright (C) 2010, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -23,61 +23,99 @@
 //|                                                                 |
 //[]---------------------------------------------------------------[]
 //
-// OVERVIEW: IndexList.cpp
+// OVERVIEW: Writer.h
 // ========
-// Source file for index list.
+// Class definition for generic writer.
 //
 // Author: Paulo Pagliosa
-// Last revision: 21/03/2019
+// Last revision: 10/07/2023
 
-#include "geometry/IndexList.h"
+#ifndef __Writer_h
+#define __Writer_h
 
-namespace cg
-{ // begin namespace cg
+#include "core/SharedObject.h"
+#include <iostream>
+#include <fstream>
 
-namespace internal
-{ // begin namespace internal
-
-static IndexListNode _nullObjectIndex;
-
-} // end namespace internal
+namespace cg::util
+{ // begin namespace cg::util
 
 
 /////////////////////////////////////////////////////////////////////
 //
-// IndexList implementation
-// =========
-IndexListNode* IndexListNode::_null = &internal::_nullObjectIndex;
-
-void
-IndexList::clear()
+// Writer: generic writer class
+// ======
+class Writer: public SharedObject
 {
-  while (_head != IndexListNode::_null)
+public:
+  Writer():
+    _out{std::cout}
   {
-    auto temp = _head;
-
-    _head = temp->_next;
-    delete temp;
+    // do nothing
   }
-  _size = 0;
-}
 
-typename IndexList::iterator
-IndexList::remove(iterator i)
-{
-#ifdef _DEBUG
-  if (i._list != this)
-    throw std::logic_error("Index list: bad iterator");
-#endif // _DEBUG
-  if (*i._node != IndexListNode::_null)
+  Writer(const char* filename):
+    _file{filename},
+    _out{_file}
   {
-    auto temp = *i._node;
-
-    *i._node = temp->_next;
-    delete temp;
-    --_size;
+    // do nothing
   }
-  return i;
-}
 
-} // end namespace cg
+  ~Writer() override
+  {
+    _file.close();
+  }
+
+  void write(int c)
+  {
+    _out << (char)c;
+  }
+
+  void write(const char* format, ...);
+
+  void beginBlock()
+  {
+    writeTabs();
+    _out << "{\n";
+    _level++;
+  }
+
+  void endBlock()
+  {
+    _level--;
+    writeTabs();
+    _out << "}\n";
+  }
+
+  void backspace()
+  {
+    _level--;
+  }
+
+  void tab()
+  {
+    _level++;
+  }
+
+  void beginLine()
+  {
+    writeTabs();
+  }
+
+  void endLine()
+  {
+    _out << '\n';
+  }
+
+private:
+  void writeTabs();
+
+  std::ofstream _file;
+  std::ostream& _out;
+  int _level{};
+
+}; // Writer
+
+} // end namespace cg::util
+
+#endif // __Writer_h

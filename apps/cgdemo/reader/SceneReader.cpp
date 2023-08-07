@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2007, 2022 Paulo Pagliosa.                        |
+//| Copyright (C) 2007, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,12 +28,12 @@
 // Source file for scene reader.
 //
 // Author: Paulo Pagliosa
-// Last revision: 04/02/2022
+// Last revision: 11/07/2023
 
 #include "SceneReader.h"
 
-namespace cg::parser
-{ // begin namespace cg::parser
+namespace cg::util
+{ // begin namespace cg::util
 
 
 /////////////////////////////////////////////////////////////////////
@@ -47,7 +47,13 @@ SceneReader::execute()
   Reader::execute();
 }
 
-Reader::Parser*
+graph::Scene*
+SceneReader::makeScene(const char* name) const
+{
+  return  graph::Scene::New(name);
+}
+
+parser::Reader::Parser*
 SceneReader::makeParser()
 {
   return new Parser{*this};
@@ -58,12 +64,11 @@ SceneReader::makeParser()
 //
 // SceneReader::Parser implementation
 // ===================
-DEFINE_KEYWORD_TABLE(SceneReader::Parser, Reader::Parser)
+DEFINE_KEYWORD_TABLE(SceneReader::Parser, parser::Reader::Parser)
   KEYWORD("ambient", _AMBIENT, 0)
   KEYWORD("angle", _ANGLE, 0)
   KEYWORD("aspect", _ASPECT, 0)
   KEYWORD("background", _BACKGROUND, 0)
-  KEYWORD("box", _COMPONENT, _BOX)
   KEYWORD("camera", _COMPONENT, _CAMERA)
   KEYWORD("color", _COLOR, 0)
   KEYWORD("depth", _DEPTH, 0)
@@ -71,8 +76,8 @@ DEFINE_KEYWORD_TABLE(SceneReader::Parser, Reader::Parser)
   KEYWORD("directional", _DIRECTIONAL, 0)
   KEYWORD("environment", _ENVIRONMENT, 0)
   KEYWORD("falloff", _FALLOFF, 0)
-  KEYWORD("finish", _FINISH, 0)
   KEYWORD("height", _HEIGHT, 0)
+  KEYWORD("ior", _IOR, 0)
   KEYWORD("light", _COMPONENT, _LIGHT)
   KEYWORD("material", _MATERIAL, 0)
   KEYWORD("mesh", _COMPONENT, _MESH)
@@ -85,26 +90,28 @@ DEFINE_KEYWORD_TABLE(SceneReader::Parser, Reader::Parser)
   KEYWORD("rotation", _ROTATION, 0)
   KEYWORD("scale", _SCALE, 0)
   KEYWORD("scene", _SCENE, 0)
-  KEYWORD("sphere", _COMPONENT, _SPHERE)
   KEYWORD("shine", _SHINE, 0)
   KEYWORD("specular", _SPECULAR, 0)
   KEYWORD("spot", _SPOT, 0)
   KEYWORD("transform", _TRANSFORM, 0)
+  KEYWORD("transparency", _TRANSPARENCY, 0)
   END_KEYWORD_TABLE;
 
-DEFINE_ERROR_MESSAGE_TABLE(SceneReader::Parser, Reader::Parser)
+DEFINE_ERROR_MESSAGE_TABLE(SceneReader::Parser, parser::Reader::Parser)
   ERROR_MESSAGE(MATERIAL_ALREADY_DEFINED,
     "Material '%s' already defined")
-  ERROR_MESSAGE(COLOR_EXPECTED,
-    "'color' expected")
   ERROR_MESSAGE(COMPONENT_ALREADY_DEFINED,
     "Component '%s' already defined")
   ERROR_MESSAGE(INVALID_VALUE_FOR,
     "Invalid value for '%s'")
+  ERROR_MESSAGE(EMPTY_MESH_NAME,
+    "Empty mesh name")
   ERROR_MESSAGE(COULD_NOT_FIND_MESH,
     "Could not find mesh '%s'")
   ERROR_MESSAGE(COULD_NOT_FIND_MATERIAL,
     "Could not find material '%s'")
+  ERROR_MESSAGE(COULD_NOT_PARSE_COMPONENT,
+    "Could not parse component '%s'")
 END_ERROR_MESSAGE_TABLE;
 
 inline void
@@ -128,27 +135,24 @@ SceneReader::Parser::preamble()
 }
 
 void
-SceneReader::Parser::start()
+SceneReader::Parser::start() try
 {
-  try
-  {
-    preamble();
-    if (_token == _SCENE)
-      if (_scene != nullptr)
-        error(MULTIPLE_SCENE_DEFINITION);
-      else
-        parseScene();
-    if (_token != _EOF)
-      if (_token < 256)
-        error(UNEXPECTED_CHAR, _token);
-      else
-        error(SYNTAX);
-  }
-  catch (const std::exception& e)
-  {
-    _reader->_scene = nullptr;
-    throw e;
-  }
+  preamble();
+  if (_token == _SCENE)
+    if (_scene != nullptr)
+      error(MULTIPLE_SCENE_DEFINITION);
+    else
+      parseScene();
+  if (_token != _EOF)
+    if (_token < 256)
+      error(UNEXPECTED_CHAR, _token);
+    else
+      error(SYNTAX);
+}
+catch (const std::exception&)
+{
+  _reader->_scene = nullptr;
+  throw;
 }
 
 void
@@ -165,51 +169,46 @@ SceneReader::Parser::declaration()
 }
 
 inline void
-SceneReader::Parser::parseSurface(Material& material, const Color& color)
+SceneReader::Parser::parseMaterialProperties(Material& material)
 {
-  // _FINISH
-  advance();
-  match('{');
   for (;;)
     switch (_token)
     {
       case _AMBIENT:
         advance();
-        if (auto ka = matchFloat(); ka < 0 || ka > 1)
-          error(INVALID_VALUE_FOR, "ambient");
-        else
-          material.ambient = color * ka;
+        material.ambient = matchColor();
         break;
       case _DIFFUSE:
         advance();
-        if (auto kd = matchFloat(); kd < 0 || kd > 1)
-          error(INVALID_VALUE_FOR, "diffuse");
-        else
-          material.diffuse = color * kd;
+        material.diffuse = matchColor();
         break;
       case _SPOT:
         advance();
-        if (auto ks = matchFloat(); ks < 0 || ks > 1)
-          error(INVALID_VALUE_FOR, "spot");
-        else
-          material.spot = color * ks;
+        material.spot = matchColor();
         break;
       case _SHINE:
         advance();
-        if (auto ns = matchFloat(); ns < 0)
+        if (auto shine = matchFloat(); shine <= 0)
           error(INVALID_VALUE_FOR, "shine");
         else
-          material.shine = ns;
+          material.shine = shine;
         break;
       case _SPECULAR:
         advance();
-        if (auto ks = matchFloat(); ks < 0 || ks > 1)
-          error(INVALID_VALUE_FOR, "specular");
+        material.specular = matchColor();;
+        break;
+      case _TRANSPARENCY:
+        advance();
+        material.transparency = matchColor();;
+        break;
+      case _IOR:
+        advance();
+        if (auto ior = matchFloat(); ior <= 0)
+          error(INVALID_VALUE_FOR, "ior");
         else
-          material.specular = color * ks;
+          material.ior = ior;
         break;
       default:
-        matchEndOfBlock();
         return;
     }
 }
@@ -222,18 +221,13 @@ SceneReader::Parser::parseMaterial()
 
   auto name = matchString();
 
-  if (_reader->findMaterial(name) != nullptr)
+  if (_reader->materials.contains(name))
     error(MATERIAL_ALREADY_DEFINED, name.c_str());
   match('{');
-  if (_token != _COLOR)
-    error(COLOR_EXPECTED);
-  advance();
 
-  auto color = matchColor();
-  Reference<Material> material = new Material{color};
+  Reference<Material> material = new Material{Color::black};
 
-  if (_token == _FINISH)
-    parseSurface(*material, color);
+  parseMaterialProperties(*material);
   matchEndOfBlock();
   material->setName(name.c_str());
   _reader->materials.emplace(name, material);
@@ -268,7 +262,7 @@ SceneReader::Parser::parseScene()
   advance();
 
   auto sceneName = matchOptionalString();
-  auto scene = graph::Scene::New(sceneName.c_str());
+  auto scene = _reader->makeScene(sceneName.c_str());
 
   setScene(*scene);
   match('{');
@@ -426,12 +420,15 @@ SceneReader::Parser::matchLight()
 
   for (auto light = proxy->light();;)
   {
-    if (_token == _DIRECTIONAL)
-      advance();
-    else if (_token == _POINT)
+    if (_token == _POINT)
     {
       advance();
       light->setType(Light::Type::Point);
+    }
+    else if (_token == _DIRECTIONAL)
+    {
+      advance();
+      light->setType(Light::Type::Directional);
     }
     else if (_token == _SPOT)
     {
@@ -446,7 +443,7 @@ SceneReader::Parser::matchLight()
         break;
       case _RANGE:
         advance();
-        if (auto range = matchFloat(); range > 0)
+        if (auto range = matchFloat(); range >= 0)
           light->setRange(range);
         else
           error(INVALID_VALUE_FOR, "range");
@@ -472,34 +469,46 @@ SceneReader::Parser::matchLight()
 inline Reference<graph::PrimitiveProxy>
 SceneReader::Parser::matchPrimitive(int type)
 {
-  // _COMPONENT (_BOX, _SPHERE, _MESH)
-  advance();
+  if (type != _MESH)
+    return {};
 
-  String name;
+  auto name = matchString();
 
-  if (type == _BOX)
-    name = "Box";
-  else if (type == _SPHERE)
-    name = "Sphere";
-  else
-    name = matchFilename();
+  if (name.empty())
+    error(EMPTY_MESH_NAME);
 
   Reference<graph::PrimitiveProxy> proxy;
 
   if (auto mesh = Assets::loadMesh(name); nullptr == mesh)
     error(COULD_NOT_FIND_MESH, name.c_str());
   else
+  {
     proxy = makePrimitive(*mesh, name);
+    parsePrimitiveMaterial(*proxy->mapper()->primitive());
+  }
+  return proxy;
+}
+
+void
+SceneReader::Parser::parsePrimitiveMaterial(Primitive& primitive)
+{
   if (_token == _MATERIAL)
   {
     advance();
-    name = matchString();
+
+    auto name = matchString();
+
     if (auto material = _reader->findMaterial(name); material == nullptr)
       error(COULD_NOT_FIND_MATERIAL, name.c_str());
     else
-      proxy->mapper()->primitive()->setMaterial(material);
+      primitive.setMaterial(material);
   }
-  return proxy;
+}
+
+Reference<graph::Component>
+SceneReader::Parser::parseComponent(int type, graph::SceneObject&)
+{
+  return (graph::Component*)matchPrimitive(type);
 }
 
 void
@@ -513,7 +522,14 @@ SceneReader::Parser::parseComponent(graph::SceneObject& object)
   else if (type == _LIGHT)
     component = matchLight();
   else
-    component = matchPrimitive(type);
+  {
+    auto string = _lexeme;
+
+    // _COMPONENT (...)
+    advance();
+    if ((component = parseComponent(type, object)) == nullptr)
+      error(COULD_NOT_PARSE_COMPONENT, string.c_str());
+  }
 
   auto typeName = component->typeName();
 
@@ -521,4 +537,4 @@ SceneReader::Parser::parseComponent(graph::SceneObject& object)
     error(COMPONENT_ALREADY_DEFINED, typeName);
 }
 
-} // end namespace cg::parser
+} // end namespace cg::util

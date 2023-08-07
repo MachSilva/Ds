@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2014, 2020 Paulo Pagliosa.                        |
+//| Copyright (C) 2014, 2022 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,7 +28,7 @@
 // Class definition for 2D index.
 //
 // Author: Paulo Pagliosa
-// Last revision: 11/08/2020
+// Last revision: 13/12/2022
 
 #ifndef __Index2_h
 #define __Index2_h
@@ -39,7 +39,14 @@
 namespace cg
 { // begin namespace cg
 
-#define ASSERT_INT(T, msg) static_assert(std::is_integral_v<T>, msg)
+template <typename T>
+inline constexpr bool
+isInt()
+{
+  return std::is_integral_v<T>;
+}
+
+#define ASSERT_INT(T, msg) static_assert(isInt<T>(), msg)
 
 template <int D, typename T = int64_t> struct Index;
 
@@ -74,17 +81,11 @@ struct Index<2, T>
     set(i, j);
   }
 
-  HOST DEVICE
-  explicit Index(base_type i)
-  {
-    set(i, i);
-  }
-
   template <typename V>
   HOST DEVICE
   explicit Index(const V& v)
   {
-    set(base_type(v.x), base_type(v.y));
+    set(v);
   }
 
   HOST DEVICE
@@ -92,6 +93,16 @@ struct Index<2, T>
   {
     x = i;
     y = j;
+  }
+
+  template <typename V>
+  HOST DEVICE
+  void set(const V& v)
+  {
+    if constexpr (std::is_integral_v<V>)
+      x = y = base_type(v);
+    else
+      set(base_type(v.x), base_type(v.y));
   }
 
   HOST DEVICE

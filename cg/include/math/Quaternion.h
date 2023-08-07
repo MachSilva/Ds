@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2014, 2020 Paulo Pagliosa.                        |
+//| Copyright (C) 2014, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -29,7 +29,7 @@
 //
 // Author: Paulo Pagliosa
 // Modified by: Felipe Machado
-// Last revision: 17/03/2022
+// Last revision: 30/07/2023
 
 #ifndef __Quaternion_h
 #define __Quaternion_h
@@ -44,26 +44,26 @@ template <typename real, int M, int N> class Matrix;
 
 template <typename real>
 HOST DEVICE
-inline Vector3<real>
+inline constexpr Vector3<real>
 toRadians3(const Vector3<real>& v)
 {
-  const real x = math::toRadians(v.x);
-  const real y = math::toRadians(v.y);
-  const real z = math::toRadians(v.z);
+  const auto x = math::toRadians(v.x);
+  const auto y = math::toRadians(v.y);
+  const auto z = math::toRadians(v.z);
 
-  return Vector3<real>{x, y, z};
+  return {x, y, z};
 }
 
 template <typename real>
 HOST DEVICE
-inline Vector3<real>
+inline constexpr Vector3<real>
 toDegrees3(const Vector3<real>& v)
 {
-  real x = math::toDegrees(v.x);
-  real y = math::toDegrees(v.y);
-  real z = math::toDegrees(v.z);
+  const auto x = math::toDegrees(v.x);
+  const real y = math::toDegrees(v.y);
+  const real z = math::toDegrees(v.z);
 
-  return Vector3<real>{x, y, z};
+  return {x, y, z};
 }
 
 template <typename real>
@@ -71,7 +71,7 @@ HOST DEVICE
 inline Vector3<real>
 cos3(const Vector3<real>& v)
 {
-  return Vector3<real>{std::cos(v.x), std::cos(v.y), std::cos(v.z)};
+  return {real(cos(v.x)), real(cos(v.y)), real(cos(v.z))};
 }
 
 template <typename real>
@@ -79,7 +79,7 @@ HOST DEVICE
 inline Vector3<real>
 sin3(const Vector3<real>& v)
 {
-  return Vector3<real>{std::sin(v.x), std::sin(v.y), std::sin(v.z)};
+  return {real(sin(v.x)), real(sin(v.y)), real(sin(v.z))};
 }
 
 
@@ -93,7 +93,7 @@ class Quaternion
 public:
   ASSERT_REAL(real, "Quaternion: floating point type expected");
 
-  using quat = Quaternion<real>;
+  using quat = Quaternion;
   using vec3 = Vector3<real>;
   using mat3 = Matrix<real, 3, 3>;
   using value_type = real;
@@ -217,7 +217,7 @@ public:
 
   template <typename T>
   HOST DEVICE
-  quat& operator =(const T& v)
+  auto& operator =(const T& v)
   {
     set(v);
     return *this;
@@ -232,7 +232,7 @@ public:
 
   /// Returns an identity quaternion.
   HOST DEVICE
-  static quat identity()
+  static auto identity()
   {
     return quat{real(1)};
   }
@@ -267,7 +267,7 @@ public:
 
   /// Returns a quaternion from forward and up.
   HOST DEVICE
-  static quat lookAt(const vec3& forward, const vec3& up = vec3::up())
+  static auto lookAt(const vec3& forward, const vec3& up = vec3::up())
   {
     mat3 m;
 
@@ -298,7 +298,7 @@ public:
 
   /// Returns a reference to this object += q.
   HOST DEVICE
-  quat& operator +=(const quat& q)
+  auto& operator +=(const quat& q)
   {
     x += q.x;
     y += q.y;
@@ -309,7 +309,7 @@ public:
 
   /// Returns a reference to this object -= q.
   HOST DEVICE
-  quat& operator -=(const quat& q)
+  auto& operator -=(const quat& q)
   {
     x -= q.x;
     y -= q.y;
@@ -320,7 +320,7 @@ public:
 
   /// Returns a reference to this object *= s.
   HOST DEVICE
-  quat& operator *=(real s)
+  auto& operator *=(real s)
   {
     x *= s;
     y *= s;
@@ -331,35 +331,35 @@ public:
 
   /// Returns a reference to this object *= q.
   HOST DEVICE
-  quat& operator *=(const quat& q)
+  auto& operator *=(const quat& q)
   {
     return *this = operator *(q);
   }
 
   /// Returns this object + q.
   HOST DEVICE
-  quat operator +(const quat& q) const
+  auto operator +(const quat& q) const
   {
     return quat{x + q.x, y + q.y, z + q.z, w + q.w};
   }
 
   /// Returns this object + q.
   HOST DEVICE
-  quat operator -(const quat& q) const
+  auto operator -(const quat& q) const
   {
     return quat{x - q.x, y - q.y, z - q.z, w - q.w};
   }
 
   /// Returns this object * s.
   HOST DEVICE
-  quat operator *(real s) const
+  auto operator *(real s) const
   {
     return quat{x * s, y * s, z * s, w * s};
   }
 
   /// Returns this object * q.
   HOST DEVICE
-  quat operator *(const quat& q) const
+  auto operator *(const quat& q) const
   {
     const auto cx = w * q.x + q.w * x + y * q.z - q.y * z;
     const auto cy = w * q.y + q.w * y + z * q.x - q.z * x;
@@ -378,14 +378,14 @@ public:
 
   /// Returns this object * -1.
   HOST DEVICE
-  quat operator -() const
+  auto operator -() const
   {
     return quat{-x, -y, -z, -w};
   }
 
   /// Returns the conjugate of this object.
   HOST DEVICE
-  quat operator ~() const
+  auto operator ~() const
   {
     return quat{-x, -y, -z, +w};
   }
@@ -413,7 +413,7 @@ public:
 
   /// Normalizes and returns a reference to this object.
   HOST DEVICE
-  quat& normalize(real eps = math::Limits<real>::eps())
+  auto& normalize(real eps = math::Limits<real>::eps())
   {
     const auto len = length();
 
@@ -424,7 +424,7 @@ public:
 
   /// Negates and returns a reference to this object.
   HOST DEVICE
-  quat& negate()
+  auto& negate()
   {
     x = -x;
     y = -y;
@@ -435,7 +435,7 @@ public:
 
   /// Inverts and returns a reference to this object.
   HOST DEVICE
-  quat& invert()
+  auto& invert()
   {
     x = -x;
     y = -y;
@@ -445,14 +445,14 @@ public:
 
   /// Returns the conjugate of this object.
   HOST DEVICE
-  quat conjugate() const
+  auto conjugate() const
   {
     return operator ~();
   }
 
   /// Returns the inverse of this object.
   HOST DEVICE
-  quat inverse() const
+  auto inverse() const
   {
     return conjugate().normalize();
   }
@@ -470,7 +470,7 @@ public:
     const auto py = y * d2 + w * (z * vx - x * vz) + vy * w2;
     const auto pz = z * d2 + w * (x * vy - y * vx) + vz * w2;
 
-    return vec3{px, py, pz};
+    return {px, py, pz};
   }
 
   /// Returns the point p rotated by the inverse of this object.
@@ -486,7 +486,7 @@ public:
     const auto py = y * d2 - w * (z * vx - x * vz) + vy * w2;
     const auto pz = z * d2 - w * (x * vy - y * vx) + vz * w2;
 
-    return vec3{px, py, pz};
+    return {px, py, pz};
   }
 
   void print(const char* s, FILE* f = stdout) const
@@ -512,13 +512,13 @@ Quaternion<real>::eulerAngles() const
   if (tol > eps)
   {
     angles.y = real(+2 * atan2(y, x));
-    angles.x = real(+M_PI_2);
+    angles.x = +math::pi<real> / 2;
     angles.z = 0;
   }
   else if (tol < -eps)
   {
     angles.y = real(-2 * atan2(y, x));
-    angles.x = real(-M_PI_2);
+    angles.x = -math::pi<real> / 2;
     angles.z = 0;
   }
   else

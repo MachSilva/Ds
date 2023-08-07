@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2018, 2019 Paulo Pagliosa.                        |
+//| Copyright (C) 2018, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,7 +28,7 @@
 // Class definition for block allocator.
 //
 // Author: Paulo Pagliosa
-// Last revision: 16/02/2019
+// Last revision: 01/02/2023
 
 #ifndef __BlockAllocator_h
 #define __BlockAllocator_h
@@ -177,11 +177,14 @@ public:
 
   static void free(T* ptr)
   {
-    storage_type& s = storage();
+    if (ptr != nullptr)
+    {
+      storage_type& s = storage();
 
-    s.lock();
-    s.free(ptr);
-    s.unlock();
+      s.lock();
+      s.free(ptr);
+      s.unlock();
+    }
   }
 
   static int blockCount()
@@ -270,8 +273,8 @@ public:
    *
    * \returns A pointer to an object of type T, allocated by a
    * call to \ref allocate() and constructed from arguments \p
-   * args. The returned objected can be freed and destroyed by
-   * a call to \ref destroy().
+   * args. The returned object can be freed and destroyed by a
+   * call to \ref destroy().
    */
   template <typename... Args>
   static value_type* construct(Args&&... args)

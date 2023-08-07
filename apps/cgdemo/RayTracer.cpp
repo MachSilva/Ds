@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2018, 2022 Paulo Pagliosa.                        |
+//| Copyright (C) 2018, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,11 +28,12 @@
 // Source file for simple ray tracer.
 //
 // Author: Paulo Pagliosa
-// Last revision: 07/02/2022
+// Last revision: 30/07/2023
 
 #include "graphics/Camera.h"
 #include "utils/Stopwatch.h"
 #include "RayTracer.h"
+#include <iostream>
 
 using namespace std;
 
@@ -45,7 +46,7 @@ namespace
 inline void
 printElapsedTime(const char* s, Stopwatch::ms_time time)
 {
-  printf("%sElapsed time: %llu ms\n", s, time);
+  printf("%sElapsed time: %g ms\n", s, time);
 }
 
 } // end namespace
@@ -73,7 +74,7 @@ RayTracer::update()
   auto np = uint32_t(0);
 
   primitives.reserve(_scene->actorCount());
-  for (auto& actor : _scene->actors())
+  for (auto actor : _scene->actors())
     if (actor->visible)
     {
       auto p = actor->mapper()->primitive();
@@ -143,8 +144,8 @@ RayTracer::renderImage(Image& image)
 
   auto et = timer.time();
 
-  printf("\nNumber of rays: %llu", _numberOfRays);
-  printf("\nNumber of hits: %llu", _numberOfHits);
+  std::cout << "\nNumber of rays: " << _numberOfRays;
+  std::cout << "\nNumber of hits: " << _numberOfHits;
   printElapsedTime("\nDONE! ", et);
 }
 
@@ -290,7 +291,7 @@ RayTracer::shade(const Ray3f& ray,
   auto P = ray(hit.distance);
 
   // Compute direct lighting
-  for (auto& light : _scene->lights())
+  for (auto light : _scene->lights())
   {
     // If the light is turned off, then continue
     if (!light->isTurnedOn())

@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2014, 2022 Paulo Pagliosa.                        |
+//| Copyright (C) 2014, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,12 +28,13 @@
 // Class definition for RGB color.
 //
 // Author: Paulo Pagliosa
-// Last revision: 11/03/2022
+// Last revision: 30/07/2023
 
 #ifndef __Color_h
 #define __Color_h
 
 #include "math/Vector4.h"
+#include <cstdint>
 
 namespace cg
 { // begin namespace cg
@@ -74,7 +75,7 @@ public:
 
   /// Constructs a Color object from (r, g, b, a).
   HOST DEVICE
-  explicit Color(float r, float g, float b, float a = 0)
+  explicit Color(float r, float g, float b, float a = 1)
   {
     setRGB(r, g, b, a);
   }
@@ -86,11 +87,11 @@ public:
     setRGB(c);
   }
 
-  /// Constructs a Color object from (r, g, b).
+  /// Constructs a Color object from (r, g, b, a).
   HOST DEVICE
-  explicit Color(int r, int g, int b)
+  explicit Color(int r, int g, int b, int a = 255)
   {
-    setRGB(r, g, b);
+    setRGB(r, g, b, a);
   }
 
   /// Constructs a Color object from v.
@@ -103,7 +104,7 @@ public:
 
   /// Sets this object to (r, g, b, a).
   HOST DEVICE
-  void setRGB(float r, float g, float b, float a = 0)
+  void setRGB(float r, float g, float b, float a = 1)
   {
     this->r = r;
     this->g = g;
@@ -121,14 +122,14 @@ public:
     a = c[3];
   }
 
-  /// Sets this object from (r, g, b).
+  /// Sets this object from (r, g, b, a).
   HOST DEVICE
-  void setRGB(int r, int g, int b)
+  void setRGB(int r, int g, int b, int a = 255)
   {
     this->r = r * math::inverse<float>(255);
     this->g = g * math::inverse<float>(255);
     this->b = b * math::inverse<float>(255);
-    this->a = 0;
+    this->a = a * math::inverse<float>(255);
   }
 
   /// Sets this object from v.
@@ -144,7 +145,7 @@ public:
 
   template <typename V>
   HOST DEVICE
-  Color& operator =(const V& v)
+  auto& operator =(const V& v)
   {
     setRGB(v);
     return *this;
@@ -152,56 +153,56 @@ public:
 
   /// Returns this object + c.
   HOST DEVICE
-  Color operator +(const Color& c) const
+  auto operator +(const Color& c) const
   {
-    return Color(r + c.r, g + c.g, b + c.b);
+    return Color{r + c.r, g + c.g, b + c.b};
   }
 
   /// Returns this object - c.
   HOST DEVICE
-  Color operator -(const Color& c) const
+  auto operator -(const Color& c) const
   {
-    return Color(r - c.r, g - c.g, b - c.b);
+    return Color{r - c.r, g - c.g, b - c.b};
   }
 
   /// Returns this object * c.
   HOST DEVICE
-  Color operator *(const Color& c) const
+  auto operator *(const Color& c) const
   {
-    return Color(r * c.r, g * c.g, b * c.b);
+    return Color{r * c.r, g * c.g, b * c.b};
   }
 
   /// Returns this object * s.
   HOST DEVICE
-  Color operator *(float s) const
+  auto operator *(float s) const
   {
-    return Color(r * s, g * s, b * s);
+    return Color{r * s, g * s, b * s};
   }
 
   /// Returns the i-th component of this object.
   HOST DEVICE
-  const float& operator [](int i) const
+  const auto& operator [](int i) const
   {
     return (&r)[i];
   }
 
   /// Returns a reference to the i-th component of this object.
   HOST DEVICE
-  float& operator [](int i)
+  auto& operator [](int i)
   {
     return (&r)[i];
   }
 
   /// Returns a pointer to the elements of this object.
   HOST DEVICE
-  explicit operator const float*() const
+  explicit operator const float* () const
   {
     return &r;
   }
 
   /// Returns a reference to this object += c.
   HOST DEVICE
-  Color& operator +=(const Color& c)
+  auto& operator +=(const Color& c)
   {
     r += c.r;
     g += c.g;
@@ -211,7 +212,7 @@ public:
 
   /// Returns a reference to this object -= c.
   HOST DEVICE
-  Color& operator -=(const Color& c)
+  auto& operator -=(const Color& c)
   {
     r -= c.r;
     g -= c.g;
@@ -221,7 +222,7 @@ public:
 
   /// Returns a reference to this object *= c.
   HOST DEVICE
-  Color& operator *=(const Color& c)
+  auto& operator *=(const Color& c)
   {
     r *= c.r;
     g *= c.g;
@@ -231,7 +232,7 @@ public:
 
   /// Returns a reference to this object *= s.
   HOST DEVICE
-  Color& operator *=(float s)
+  auto& operator *=(float s)
   {
     r *= s;
     g *= s;
@@ -275,17 +276,55 @@ public:
   static Color darkGray;
   static Color gray;
 
-  static Color HSV2RGB(float, float, float);
+  static Color HSV2RGB(float, float, float, float = 1);
 
 }; // Color
 
 /// Returns the color s * c.
 template <typename real>
-HOST DEVICE inline Color
+HOST DEVICE inline auto
 operator *(real s, const Color& c)
 {
   return c * float(s);
 }
+
+#define R_SHIFT 0x00u
+#define G_SHIFT 0x08u
+#define B_SHIFT 0x10u
+#define A_SHIFT 0x18u
+
+constexpr inline uint32_t
+packColor(uint32_t r, uint32_t g, uint32_t b, uint32_t a = 255)
+{
+  return a << A_SHIFT | b << B_SHIFT | g << G_SHIFT | r << R_SHIFT;
+}
+
+inline uint32_t
+packColor(const Color& c)
+{
+  const auto r = uint32_t(c.r * 255);
+  const auto g = uint32_t(c.g * 255);
+  const auto b = uint32_t(c.b * 255);
+  const auto a = uint32_t(c.a * 255);
+
+  return packColor(r, g, b, a);
+}
+
+inline Color
+unpackColor(uint32_t c)
+{
+  auto r = ((c >> R_SHIFT) & 0xFF) * math::inverse<float>(255);
+  auto g = ((c >> G_SHIFT) & 0xFF) * math::inverse<float>(255);
+  auto b = ((c >> B_SHIFT) & 0xFF) * math::inverse<float>(255);
+  auto a = ((c >> A_SHIFT) & 0xFF) * math::inverse<float>(255);
+
+  return Color{r, g, b, a};
+}
+
+#undef R_SHIFT
+#undef G_SHIFT
+#undef B_SHIFT
+#undef A_SHIFT
 
 } // end namespace cg
 

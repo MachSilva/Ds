@@ -221,7 +221,7 @@
     <ClInclude Include="..\..\include\geometry\PointGrid3.h">
       <Filter>Header Files\geometry</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\geometry\ParticleSystem.h">
+    <ClInclude Include="..\..\include\geometry\PointArray.h">
       <Filter>Header Files\geometry</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\utils\Stopwatch.h">
@@ -365,6 +365,9 @@
     <ClInclude Include="..\..\include\graphics\TransformableObject.h">
       <Filter>Header Files\graphics</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\graphics\AssetFolder.h">
+      <Filter>Header Files\graphics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\externals\src\gl3w.c">
@@ -393,9 +396,6 @@
     </ClCompile>
     <ClCompile Include="..\..\src\debug\AnimatedAlgorithm.cpp">
       <Filter>Source Files\debug</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\geometry\IndexList.cpp">
-      <Filter>Source Files\geometry</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\geometry\MeshSweeper.cpp">
       <Filter>Source Files\geometry</Filter>
@@ -490,9 +490,6 @@
     <ClCompile Include="..\..\src\graph\CameraProxy.cpp">
       <Filter>Source Files\graph</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\include\graphics\TriangleMeshMapper.cpp">
-      <Filter>Source Files\graphics</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\graph\Component.cpp">
       <Filter>Source Files\graph</Filter>
     </ClCompile>
@@ -530,6 +527,12 @@
       <Filter>Source Files\graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\graphics\TransformableObject.cpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\graphics\AssetFolder.cpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\graphics\TriangleMeshMapper.cpp">
       <Filter>Source Files\graphics</Filter>
     </ClCompile>
   </ItemGroup>

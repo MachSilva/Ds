@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2016, 2022 Paulo Pagliosa.                        |
+//| Copyright (C) 2016, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,7 +28,7 @@
 // Class definition for point grid base.
 //
 // Author: Paulo Pagliosa
-// Last revision: 19/02/2022
+// Last revision: 28/01/2023
 
 #ifndef __PointGridBase_h
 #define __PointGridBase_h
@@ -50,28 +50,26 @@ template <int, typename, typename, typename> class PointGridSearcher;
 // =============
 template <int D, typename real, typename PA, typename IL>
 class PointGridBase: public RegionGrid<D, real, IL>,
-  public PointHolder<PA>
+  public PointHolder<D, real, PA>
 {
 protected:
-  ASSERT_INDEX_LIST(IL, "IndexList expected");
+  ASSERT_INDEX_LIST(IL, "Index list expected");
 
   using Base = RegionGrid<D, real, IL>;
-  using PointSet = PointHolder<PA>;
+  using PointSet = PointHolder<D, real, PA>;
 
-  PointGridBase(const PA& points, real h, bool squared = false):
-    Base{PointSet::computeBounds<D, real>(points, squared), h},
-    PointSet(points)
+  PointGridBase(const Bounds<real, D>& bounds, PA& points, real h):
+    Base{bounds, h},
+    PointSet{points}
   {
     // do nothing
   }
 
-  template <typename P>
-  PointGridBase(PointGridBase<D, real, P, IL>&& other, const PA& points):
+  PointGridBase(PointGridBase<D, real, PA, IL>&& other):
     Base{std::move(other)},
-    PointSet(points)
+    PointSet{other.points()}
   {
-    if (points.size() != other.points().size())
-      throw std::logic_error("PointGridBase(): bad points");
+    // do nothing
   }
 
 }; // PointGridBase
@@ -81,72 +79,82 @@ protected:
 //
 // PointGrid: generic point tree class
 // =========
-template <int D, typename real, typename PA, typename IL = IndexList>
+template <int D, typename real, typename PA, typename IL = IndexList<>>
 class PointGrid: public PointGridBase<D, real, PA, IL>
 {
 public:
   using type = PointGrid<D, real, PA, IL>;
   using Base = PointGridBase<D, real, PA, IL>;
+  using PointSet = typename Base::PointSet;
+  using point_id = typename IL::value_type;
+  using pid_list = IndexList<point_id>;
   using vec_type = Vector<real, D>;
-  using KNN = KNNHelper<vec_type>;
-  using Searcher = PointGridSearcher<D, real, PA, IL>;
+  using KNN = KNNHelper<vec_type, point_id>;
+  using Searcher = PointGridSearcher<D, real, PA, pid_list>;
 
-  PointGrid(const PA& points, real h, bool squared = true);
+  PointGrid(const Bounds<real, D>& bounds, PA& points, real h);
 
-  template <typename P>
-  PointGrid(PointGrid<D, real, P, IL>&& other, const PA& points):
-    Base{std::move(other), points}
+  PointGrid(PA& points, real h, bool squared = true):
+    type{PointSet::computeBounds(points, squared), points, h}
+  {
+    // do nothing
+  }
+
+  PointGrid(PointGrid<D, real, PA, IL>&& other):
+    Base{std::move(other)}
   {
     // do nothing
   }
 
   int findNearestNeighbors(const vec_type& point,
     int k,
-    int indices[],
+    point_id indices[],
     real* distances = nullptr,
     typename KNN::Norm norm = KNN::squaredNorm) const;
 
-  size_t findNeighbors(const vec_type& point, IndexList& nids) const
+  size_t findNeighbors(const vec_type& point, pid_list& nids) const
   {
     return Searcher::findNeighbors(*this, point, nids);
   }
 
-  size_t findNeighbors(size_t i, IndexList& nids) const
+  size_t findNeighbors(size_t i, pid_list& nids) const
   {
-    assert(i < this->_points.size());
-    return findNeighbors(vec_type{this->_points[i]}, nids);
+    assert(i < this->points().size());
+    return findNeighbors(vec_type{this->points()[i]}, nids);
   }
 
-  template <typename I>
-  void addPoint(I i)
+  bool addPoint(point_id i)
   {
-    assert(i < this->_points.size());
-    addPoint(this->_points[i], (int)i);
+    assert(i < this->points().size());
+    return addPoint(this->points()[i], i);
   }
 
 protected:
-  void addPoint(const vec_type& point, int i)
+  bool addPoint(const vec_type& point, point_id i)
   {
-    (*this)[this->id(point)].add(i);
+    if (this->bounds().contains(point))
+      return (*this)[this->id(point)].add(i);
+    return false;
   }
 
 }; // PointGrid
 
 template <int D, typename real, typename PA, typename IL>
-PointGrid<D, real, PA, IL>::PointGrid(const PA& points, real h, bool squared):
-  Base{points, h, squared}
+PointGrid<D, real, PA, IL>::PointGrid(const Bounds<real, D>& bounds,
+  PA& points,
+  real h):
+  Base{bounds, points, h}
 {
-  using index_type = decltype(points.size());
-
-  for (index_type n = points.size(), i = 0; i < n; ++i)
-    addPoint(points[i], (int)i);
+  for (point_id n = points.size(), i = 0; i < n; ++i)
+    if (this->activePoint(i))
+      addPoint(points[i], i);
 }
 
 template <int D, typename real, typename PA, typename IL>
 int
 PointGrid<D, real, PA, IL>::findNearestNeighbors(const vec_type& p,
   int k,
-  int indices[],
+  point_id indices[],
   real* distances,
   typename KNN::Norm norm) const
 {
@@ -156,11 +164,12 @@ PointGrid<D, real, PA, IL>::findNearestNeighbors(const vec_type& p,
   */
 
   KNN knn{p, k, norm};
-  auto n = this->_points.size();
+  const auto& points = this->points();
+  auto n = points.size;
 
   if (n <= k)
-    for (int i = 0; i < n; ++i)
-      knn.test(this->_points[i], i);
+    for (decltype(n) i = 0; i < n; ++i)
+      knn.test(points[i], i);
   else
   {
     // TODO

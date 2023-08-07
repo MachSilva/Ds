@@ -28,7 +28,7 @@
 // Class definition for graphics application.
 //
 // Author: Paulo Pagliosa
-// Last revision: 16/03/2022
+// Last revision: 14/12/2022
 
 #ifndef __Application_h
 #define __Application_h
@@ -62,9 +62,6 @@ public:
   /// Runs this application.
   int run(int argc, char** argv);
 
-  /// Throws a runtime error exception.
-  static void error(const char* format, ...);
-
   /// Returns the application base directory.
   static const auto& baseDirectory()
   {
@@ -90,8 +87,8 @@ public:
   }
 
 private:
+  GLWindow* _mainWindow;
   int _id;
-  GLWindow *_mainWindow;
 
   static std::string _baseDirectory;
   static std::string _assetsPath;

@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2018, 2020 Paulo Pagliosa.                        |
+//| Copyright (C) 2018, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,7 +28,7 @@
 // Source file for OpenGL 2D render window.
 //
 // Author: Paulo Pagliosa
-// Last revision: 09/11/2021
+// Last revision: 30/07/2023
 
 #include "graphics/GLRenderWindow2.h"
 
@@ -51,7 +51,7 @@ namespace
 {
 
 constexpr auto MOVE_SCALE = 0.01f;
-constexpr auto ZOOM_SCALE = 1.01f;
+constexpr auto ZOOM_SCALE = 1.05f;
 
 }
 
@@ -73,15 +73,14 @@ bool
 GLRenderWindow2::windowResizeEvent(int width, int height)
 {
   _g2->setAspectRatio((float)width / height);
-  return true;
+  return GLWindow::windowResizeEvent(width, height);
 }
 
 bool
-GLRenderWindow2::keyInputEvent(int key, int action, int mods)
+GLRenderWindow2::keyInputEvent(int key, int action, int)
 {
   if (ImGui::GetIO().WantCaptureKeyboard || action == GLFW_RELEASE)
     return false;
-  (void)mods;
 
   const auto delta = _g2->bounds().size() * MOVE_SCALE;
   auto d = vec2f::null();
@@ -117,11 +116,10 @@ GLRenderWindow2::scrollEvent(double, double yOffset)
 }
 
 bool
-GLRenderWindow2::mouseButtonInputEvent(int button, int actions, int mods)
+GLRenderWindow2::mouseButtonInputEvent(int button, int actions, int)
 {
   if (ImGui::GetIO().WantCaptureMouse)
     return false;
-  (void)mods;
 
   auto active = actions == GLFW_PRESS;
 
@@ -136,7 +134,7 @@ GLRenderWindow2::mouseButtonInputEvent(int button, int actions, int mods)
       break;
     case GLFW_MOUSE_BUTTON_LEFT:
       if (active)
-        return onMouseDown(_pivotX, _pivotY);
+        return onMouseLeftPress(_pivotX, _pivotY);
   }
   return true;
 }
@@ -144,7 +142,7 @@ GLRenderWindow2::mouseButtonInputEvent(int button, int actions, int mods)
 bool
 GLRenderWindow2::mouseMoveEvent(double xPos, double yPos)
 {
-  if (!_dragFlags)
+  if (!uint32_t(_dragFlags))
     return false;
   _mouseX = (int)xPos;
   _mouseY = (int)yPos;
@@ -162,14 +160,15 @@ GLRenderWindow2::mouseMoveEvent(double xPos, double yPos)
     }
     else if (_dragFlags.isSet(DragBits::Pan))
     {
-      // TODO: pan
+      const auto dt = _g2->bounds().size() * MOVE_SCALE;
+      _g2->pan(dt.x * dx, -dt.y * dy);
     }
   }
   return true;
 }
 
 bool
-GLRenderWindow2::onMouseDown(int, int)
+GLRenderWindow2::onMouseLeftPress(int, int)
 {
   return false;
 }

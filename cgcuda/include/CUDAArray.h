@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2021 Paulo Pagliosa.                              |
+//| Copyright (C) 2021, 2022 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,7 +28,7 @@
 // Classes for host and CUDA arrays.
 //
 // Author: Paulo Pagliosa
-// Last revision: 24/04/2021
+// Last revision: 14/09/2022
 
 #ifndef __CUDAArray_h
 #define __CUDAArray_h
@@ -154,8 +154,8 @@ Array<T>::Array(const cuda::Array<T>& other):
 namespace host
 { // begin namespace host
 
-template <typename... Args>
-using SoA = cg::SoA<ArrayAllocator, Args...>;
+template <typename index_t, typename... Args>
+using SoA = cg::SoA<ArrayAllocator, index_t, Args...>;
 
 } // end namespace host
 
@@ -167,22 +167,22 @@ namespace cuda
 //
 // SoA: CUDA SoA class
 // ===
-template <typename... Args>
-class SoA: public cg::SoA<ArrayAllocator, Args...>
+template <typename index_t, typename... Args>
+class SoA: public cg::SoA<ArrayAllocator, index_t, Args...>
 {
 public:
-  using type = SoA<Args...>;
-  using cg::SoA<ArrayAllocator, Args...>::SoA;
+  using type = SoA<index_t, Args...>;
+  using cg::SoA<ArrayAllocator, index_t, Args...>::SoA;
 
-  SoA(const host::SoA<Args...>& other)
+  SoA(const host::SoA<index_t, Args...>& other)
   {
-    this->resize(other.size());
+    this->reallocate(other.size());
     this->template copyArrayToDevice<0>(other);
   }
 
 private:
   template <size_t I>
-  void copyArrayToDevice(const host::SoA<Args...>& other)
+  void copyArrayToDevice(const host::SoA<index_t, Args...>& other)
   {
     if constexpr (I < sizeof...(Args))
     {

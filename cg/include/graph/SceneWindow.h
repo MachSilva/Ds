@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2020, 2022 Paulo Pagliosa.                        |
+//| Copyright (C) 2020, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -29,7 +29,7 @@
 //
 // Author: Paulo Pagliosa
 // Modified by: Felipe Machado
-// Last revision: 12/07/2022
+// Last revision: 14/07/2023
 
 #ifndef __GraphSceneWindow_h
 #define __GraphSceneWindow_h
@@ -52,11 +52,11 @@ namespace cg::graph
 class SceneWindow: public SceneWindowBase, public SceneObjectBuilder
 {
 public:
-  template <typename C = SharedObject>
-  using InspectFunction = void (*)(SceneWindow&, C&);
+  template <typename W = SceneWindow, typename C = SharedObject>
+  using InspectFunction = void (*)(W&, C&);
 
-  template <typename C>
-  void registerInspectFunction(InspectFunction<C> function)
+  template <typename W, typename C>
+  void registerInspectFunction(InspectFunction<W, C> function)
   {
     assert(function != nullptr);
     _inspectFunctions[typeid(C).hash_code()] = (InspectFunction<>)function;
@@ -78,26 +78,49 @@ protected:
   bool _showHierarchy{true};
   bool _showInspector{true};
   bool _showAssets{true};
+  struct
+  {
+    bool hierarchy : 1;
+    bool sceneObjects : 1;
+
+  } _editFlags{};
 
   SceneWindow(const char* title, int width, int height):
     SceneWindowBase{title, width, height}
   {
-    registerInspectFunction<CameraProxy>(inspectCamera);
-    registerInspectFunction<LightProxy>(inspectLight);
-    registerInspectFunction<TriangleMeshProxy>(inspectPrimitive);
+    registerInspectFunction(inspectCamera);
+    registerInspectFunction(inspectLight);
+    registerInspectFunction(inspectPrimitive);
+  }
+
+  void setEditFlags(bool value)
+  {
+    _editFlags.hierarchy = _editFlags.sceneObjects = value;
+  }
+
+  auto editHierarchy() const
+  {
+    return _editFlags.hierarchy;
+  }
+
+  auto editSceneObjects() const
+  {
+    return _editFlags.sceneObjects;
   }
 
   SceneNode* currentNode() { return &_currentNode; }
 
+  virtual Scene* makeNewScene() const;
+
   void setScene(Scene&);
 
   void render() override;
-  bool onPickObject(int, int) override;
-  bool onPressKey(int) override;
+  bool onMouseLeftPress(int, int) override;
+  bool onKeyPress(int, int) override;
 
   virtual void renderScene();
   virtual void createObjectMenu();
-  virtual Component* addComponentMenu();
+  virtual Component* addComponentMenu(const SceneObject&);
 
   void drawSelectedObject(const SceneObject&);
   void drawComponents(const SceneObject&);
@@ -107,7 +130,22 @@ protected:
 
   void hierarchyWindow(const char* = "Hierarchy");
   void inspectorWindow(const char* = "Inspector");
-  void assetsWindow();
+
+  void assetWindow()
+  {
+    if (_showAssets)
+    {
+      ImGui::Begin("Assets");
+      assetPanels();
+      ImGui::End();
+    }
+  }
+
+  virtual void assetPanels();
+  virtual void materialPanel();
+  virtual void meshPanel();
+
+  void inspectMaterial(Primitive&) const;
 
   static void inspectTransform(Transform&);
   static void inspectCamera(SceneWindow&, CameraProxy&);
@@ -120,11 +158,12 @@ private:
   SceneNode _currentNode{};
   InspectMap _inspectFunctions;
 
-  SceneBase* makeScene() override;
+  SceneBase* makeScene() final;
 
   void createObjectButton();
   bool treeNode(SceneNode, ImGuiTreeNodeFlags);
   bool deleteObjectPopup(SceneObject&);
+  bool dropSceneObject(SceneObject&);
   bool objectHierarchy(SceneObject&);
   void addComponentButton(SceneObject&);
 

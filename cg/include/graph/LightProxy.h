@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2022 Paulo Pagliosa.                              |
+//| Copyright (C) 2022, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,7 +28,7 @@
 // Class definition for light proxy.
 //
 // Author: Paulo Pagliosa
-// Last revision: 24/01/2022
+// Last revision: 19/07/2023
 
 #ifndef __LightProxy_h
 #define __LightProxy_h
@@ -36,11 +36,8 @@
 #include "graph/ComponentProxy.h"
 #include "graphics/Light.h"
 
-namespace cg
-{ // begin namespace cg
-
-namespace graph
-{ // begin namespace graph
+namespace cg::graph
+{ // begin namespace cg::graph
 
 
 /////////////////////////////////////////////////////////////////////
@@ -81,19 +78,17 @@ private:
 
   void afterAdded() override;
   void beforeRemoved() override;
-  void update() override;
+  void transformChanged() override;
   void setVisible(bool value) override;
 
 }; // LightProxy
 
 inline auto
-asLight(Component* component)
+asLight(const Component* component)
 {
-  return dynamic_cast<LightProxy*>(component);
+  return dynamic_cast<const LightProxy*>(component);
 }
 
-} // end namepace graph
-
-} // end namespace cg
+} // end namepace cg::graph
 
 #endif // __LightProxy_h

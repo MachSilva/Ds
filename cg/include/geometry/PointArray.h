@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2019, 2020 Paulo Pagliosa.                        |
+//| Copyright (C) 2019, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -23,18 +23,18 @@
 //|                                                                 |
 //[]---------------------------------------------------------------[]
 //
-// OVERVIEW: ParticleSystem.h
+// OVERVIEW: PointArray.h
 // ========
-// Class definition for particle system.
+// Class definition for point array.
 //
 // Author: Paulo Pagliosa
-// Last revision: 30/05/2020
+// Last revision: 17/01/2023
 
-#ifndef __ParticleSystem_h
-#define __ParticleSystem_h
+#ifndef __PointArray_h
+#define __PointArray_h
 
 #include "core/SoA.h"
-#include "math/Matrix4x4.h"
+#include "geometry/IndexList.h"
 
 namespace cg
 { // begin namespace cg
@@ -42,55 +42,25 @@ namespace cg
 
 //////////////////////////////////////////////////////////
 //
-// ParticleSystem: particle system class
-// ==============
-template <int D, typename real, typename Allocator, typename... Args>
-class ParticleSystem
+// PointArray: point array class
+// ==========
+template <class Allocator, class index_t, class Vector, class... Args>
+class PointArray
 {
 public:
-  using vec_type = Vector<real, D>;
-  using Data = SoA<Allocator, vec_type, Args...>;
-  using type = ParticleSystem<D, real, Allocator, Args...>;
+  ASSERT_SIGNED(index_t, "PointArray: signed integral type expected");
 
-  ParticleSystem() = default;
+  using PointId = index_t;
+  using Data = SoA<Allocator, index_t, Vector, Args...>;
+  using type = PointArray<Allocator, index_t, Vector, Args...>;
 
-  ParticleSystem(size_t capacity):
+  PointArray() = default;
+
+  PointArray(index_t capacity):
     _data{capacity},
-    _capacity{capacity}
+    _flag{capacity}
   {
     // do nothing
-  }
-
-  void resize(size_t capacity)
-  {
-    // TODO: move old data
-    _data.resize(_size = _capacity = capacity);
-  }
-
-  void clear()
-  {
-    _size = 0;
-  }
-
-  bool add(const vec_type& p, const Args&... args)
-  {
-    if (_size == _capacity)
-      return false;
-    set(_size++, p, args...);
-    return true;
-  }
-
-  bool remove(size_t i)
-  {
-    if (i >= _size)
-      return false;
-    _data.swap(i, --_size);
-    return true;
-  }
-
-  auto size() const
-  {
-    return _size;
   }
 
   auto capacity() const
@@ -98,47 +68,100 @@ public:
     return _data.size();
   }
 
-  template <size_t I>
-  constexpr const auto& get(size_t i) const
+  auto size() const
   {
-    assert(i < _size);
+    return _size;
+  }
+
+  auto activeCount() const
+  {
+    return _activeCount;
+  }
+
+  void reallocate(index_t capacity)
+  {
+    _data.reallocate(capacity);
+    _flag.reallocate(capacity);
+    clear();
+  }
+
+  void clear()
+  {
+    _size = _activeCount = 0;
+    _freeList = eol;
+  }
+
+  auto add(const Vector& p, const Args&... args)
+  {
+    PointId i;
+
+    if (_freeList != eol)
+    {
+      i = _freeList;
+      _freeList = _flag.template get<0>(i);
+    }
+    else if (_size < capacity())
+      i = _size++;
+    else
+      return -1;
+    _data.set(i, p, args...);
+    _flag.set(i, activeFlag);
+    _activeCount++;
+    return i;
+  }
+
+  bool remove(PointId i)
+  {
+    return i >= 0 && i < _size ? deactivate(i), true : false;
+  }
+
+  bool active(PointId i) const
+  {
+    assert(i >= 0 && i < _size);
+    return _flag.template get<0>(i) == activeFlag;
+  }
+
+  template <size_t I>
+  const auto& get(PointId i) const
+  {
+    assert(i >= 0 && i < _size);
     return _data.template get<I>(i);
   }
 
   template <size_t I>
-  constexpr auto& get(size_t i)
+  auto& get(PointId i)
   {
-    assert(i < _size);
+    assert(i >= 0 && i < _size);
     return _data.template get<I>(i);
   }
 
-  void set(size_t i, const vec_type& p, const Args&... args)
+  void set(PointId i, const Vector& p, const Args&... args)
   {
-    assert(i < _size);
+    assert(i >= 0 && i < _size);
     _data.set(i, p, args...);
   }
 
-  constexpr const auto& position(size_t i) const
+  const auto& position(PointId i) const
   {
     return this->template get<0>(i);
   }
 
-  constexpr auto& position(size_t i)
+  auto& position(PointId i)
   {
     return this->template get<0>(i);
   }
 
-  constexpr void setPosition(size_t i, const vec_type& p)
+  void setPosition(PointId i, const Vector& p)
   {
     position(i) = p;
   }
 
-  const auto& operator [](size_t i) const
+  const auto& operator [](PointId i) const
   {
     return position(i);
   }
 
-  auto& operator [](size_t i)
+  auto& operator [](PointId i)
   {
     return position(i);
   }
@@ -164,19 +187,35 @@ public:
   }
 
 protected:
+  using Flag = SoA<Allocator, index_t, index_t>;
+
+  static constexpr index_t eol{-1};
+  static constexpr index_t activeFlag{-2};
+
   Data _data;
-  size_t _size{};
-  size_t _capacity{};
+  Flag _flag;
+  index_t _size{};
+  index_t _activeCount{};
+  index_t _freeList{eol};
 
-}; // ParticleSystem
+  void deactivate(PointId i)
+  {
+    if (!active(i))
+      return;
+    if (--_activeCount == 0)
+    {
+      _size = 0;
+      _freeList = eol;
+    }
+    else
+    {
+      _flag.set(i, _freeList);
+      _freeList = i;
+    }
+  }
 
-
-template <typename real, typename Allocator, typename... Args>
-using ParticleSystem2 = ParticleSystem<2, real, Allocator, Args...>;
-
-template <typename real, typename Allocator, typename... Args>
-using ParticleSystem3 = ParticleSystem<3, real, Allocator, Args...>;
+}; // PointArray
 
 } // end namespace cg
 
-#endif // __ParticleSystem_h
+#endif // __PointArray_h

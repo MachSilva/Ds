@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2018, 2022 Paulo Pagliosa.                        |
+//| Copyright (C) 2018, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,15 +28,12 @@
 // Source file for scene object component.
 //
 // Author: Paulo Pagliosa
-// Last revision: 24/01/2022
+// Last revision: 28/06/2023
 
 #include "graph/Component.h"
 
-namespace cg
-{ // begin namespace cg
-
-namespace graph
-{ // begin namespace graph
+namespace cg::graph
+{ // begin namespace cg::graph
 
 
 /////////////////////////////////////////////////////////////////////
@@ -44,9 +41,9 @@ namespace graph
 // Component implementation
 // =========
 bool
-Component::canBeSiblingOf(Component* component) const
+Component::canAdd(Component* other) const
 {
-  return component != this && component->_typeName != _typeName;
+  return other != this && other->_typeName != _typeName;
 }
 
 void
@@ -62,7 +59,7 @@ Component::beforeRemoved()
 }
 
 void
-Component::update()
+Component::transformChanged()
 {
   // do nothing
 }
@@ -73,6 +70,16 @@ Component::setVisible(bool)
   // do nothing
 }
 
-} // end namespace graph
+bool
+Component::tryConnectingTo(Component*)
+{
+  return false;
+}
 
-} // end namespace cg
+bool
+Component::tryDisconnectingFrom(Component*)
+{
+  return false;
+}
+
+} // end namespace cg::graph

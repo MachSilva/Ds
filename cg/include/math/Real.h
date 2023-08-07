@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2014, 2022 Paulo Pagliosa.                        |
+//| Copyright (C) 2014, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,31 +28,17 @@
 // Math macros/static functions.
 //
 // Author: Paulo Pagliosa
-// Last revision: 18/01/2022
+// Last revision: 30/07/2023
 
 #ifndef __Real_h
 #define __Real_h
 
 #include "math/RealLimits.h"
 #include <cmath>
+#include <numbers>
 
-//
-// Math macros
-//
-#ifndef M_SQRT2
-#define M_SQRT2 1.4142135623730950488016887242097
-#endif
-#define M_SQRT3 1.7320508075688772935274463415059
-#ifndef M_PI
-#define M_PI    3.1415926535897932384626433832795
-#define M_PI_2  (M_PI * 0.5)
-#endif
-
-namespace cg
-{ // begin namespace cg
-
-namespace math
-{ // begin namespace math
+namespace cg::math
+{ // begin namespace cg::math
 
 /// Returns the absolute value of x.
 template <typename real>
@@ -91,7 +77,7 @@ template <typename real>
 HOST DEVICE inline constexpr bool
 isZero(real x, real eps = Limits<real>::eps())
 {
-  return abs<real>(x) <= eps;
+  return abs(x) <= eps;
 }
 
 /// Returns true if x is close to y.
@@ -99,7 +85,7 @@ template <typename real>
 HOST DEVICE inline constexpr bool
 isEqual(real x, real y, real eps = Limits<real>::eps())
 {
-  return isZero<real>(x - y, eps);
+  return isZero(x - y, eps);
 }
 
 /// Returns true if x is positive.
@@ -123,7 +109,7 @@ template <typename real>
 HOST DEVICE inline constexpr bool
 isNull(real x, real y, real eps)
 {
-  return isZero<real>(x, eps) && isZero<real>(y, eps);
+  return isZero(x, eps) && isZero(y, eps);
 }
 
 /// Returns true if (x, y, z) is close to null.
@@ -131,7 +117,7 @@ template <typename real>
 HOST DEVICE inline constexpr bool
 isNull(real x, real y, real z, real eps)
 {
-  return isNull<real>(x, y, eps) && isZero<real>(z, eps);
+  return isNull(x, y, eps) && isZero(z, eps);
 }
 
 /// Returns true if (x, y, z, w) is close to null.
@@ -139,7 +125,7 @@ template <typename real>
 HOST DEVICE inline constexpr bool
 isNull(real x, real y, real z, real w, real eps)
 {
-  return isNull<real>(x, y, z, eps) && isZero<real>(w, eps);
+  return isNull(x, y, z, eps) && isZero(w, eps);
 }
 
 /// Returns 1 / x.
@@ -150,12 +136,16 @@ inverse(real x)
   return static_cast<real>(1 / x);
 }
 
+/// Returns pi.
+template <typename real>
+inline constexpr real pi = std::numbers::pi_v<real>;
+
 /// Returns x in radians.
 template <typename real>
 HOST DEVICE inline constexpr real
 toRadians(real x)
 {
-  return static_cast<real>(x * M_PI / 180);
+  return static_cast<real>(x * pi<real> / 180);
 }
 
 /// Returns x in degrees.
@@ -163,7 +153,7 @@ template <typename real>
 HOST DEVICE inline constexpr real
 toDegrees(real x)
 {
-  return static_cast<real>(x * 180 / M_PI);
+  return static_cast<real>(x * 180 / pi<real>);
 }
 
 /// Returns x ^ 2.
@@ -201,16 +191,6 @@ clamp(real x, real a, real b)
   return x < a ? a : (x > b ? b : x);
 }
 
-/// Returns pi.
-template <typename real>
-HOST DEVICE inline constexpr real
-pi()
-{
-  return (real)M_PI;
-}
-
-} // end namespace math
-
-} // end namespace cg
+} // end namespace math::cg
 
 #endif // __Real_h

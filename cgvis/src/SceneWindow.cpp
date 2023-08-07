@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2018, 2022 Paulo Pagliosa.                        |
+//| Copyright (C) 2018, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,7 +28,7 @@
 // Source file for generic vis scene window.
 //
 // Author: Paulo Pagliosa
-// Last revision: 16/03/2022
+// Last revision: 30/07/2023
 
 #include "SceneWindow.h"
 
@@ -58,7 +58,7 @@ SceneWindow::render()
 
   if (auto actor = _currentNode.as<Actor>())
   {
-    editor->setLineColor(_selectedWireframeColor);
+    editor->setLineColor(_selectedWireframeColor[0]);
     editor->drawBounds(actor->mapper()->bounds());
   }
   else if (auto light = _currentNode.as<Light>())
@@ -69,7 +69,7 @@ SceneWindow::render()
 }
 
 bool
-SceneWindow::onPressKey(int key)
+SceneWindow::onKeyPress(int key, int)
 {
   if (key != GLFW_KEY_F || _currentNode.as<Scene>())
     return false;
@@ -215,7 +215,7 @@ SceneWindow::treeNode(graph::SceneNode node, ImGuiTreeNodeFlags flags)
   if (node == _currentNode)
     flags |= ImGuiTreeNodeFlags_Selected;
 
-  auto open = ImGui::TreeNodeEx(node, flags, node->name());
+  auto open = ImGui::TreeNodeEx(node, flags, "%s", node->name());
 
   if (ImGui::IsItemClicked())
     _currentNode = node;
@@ -238,14 +238,14 @@ SceneWindow::hierarchyWindow(const char* title)
     flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
     if (ImGui::TreeNode("Actors"))
     {
-      for (auto& actor : scene->actors())
-        treeNode(actor.get(), flags);
+      for (auto actor : scene->actors())
+        treeNode(actor, flags);
       ImGui::TreePop();
     }
     if (ImGui::TreeNode("Lights"))
     {
-      for (auto& light : scene->lights())
-        treeNode(light.get(), flags);
+      for (auto light : scene->lights())
+        treeNode(light, flags);
       ImGui::TreePop();
     }
     ImGui::TreePop();

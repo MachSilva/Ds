@@ -36,7 +36,7 @@
 
 #include "graphics/GLGraphics3.h"
 #include "graphics/GLRendererBase.h"
-
+#include <functional>
 #include <sstream>
 
 namespace cg
@@ -238,7 +238,9 @@ private:
 class GLRenderer: public GLRendererBase, public GLGraphics3
 {
 public:
-  using RenderFunction = void (*)(GLRenderer&);
+  constexpr static auto maxLights = 8;
+
+  using RenderFunction = std::function<void(GLRenderer&)>;
   using GLGraphics3::drawMesh;
 
   /// Constructs a GL renderer object.

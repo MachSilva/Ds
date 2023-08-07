@@ -9,7 +9,7 @@ lights, and cameras), and basic [OpenGL] rendering and ray-tracing support,
 among others.
 
 Ds has been employed in the teaching of subjects such as computer graphics,
-visualization, and games, in undergraduate and graduate courses of Computer
+visualization, and games, in undergraduate and graduate courses in Computer
 Science at the [Faculty of Computing](https://www.facom.ufms.br) of the
 [Federal University of Mato Grosso do Sul](https://www.ufms.br). Ds has
 also been used in several research projects in physics-based animation
@@ -17,12 +17,12 @@ and geometric processing.
 
 ## Compiling Ds
 
-The current master version is 1.1 and supports Windows 10 and later. All
+The current master version is 1.11 and supports Windows 10 and later. All
 headers and source files are in the [cg/](/cg) folder. The only dependencies
 are [GLFW] and [Dear ImGui]. All headers, source files, and libraries needed
 are already included in the [cg/externals/](/cg/externals) folder.
-The project file for Visual Studio 2019 is located in the
-[cg/build/vs2019/](/cg/build/vs2019) folder. There is also a pre-compiled
+The project file for Visual Studio 2022 is located in the
+[cg/build/vs2022/](/cg/build/vs2022) folder. There is also a pre-compiled
 binary available in the [cg/lib/](/cg/lib) folder.
 
 ## Ds Demo
@@ -30,12 +30,12 @@ binary available in the [cg/lib/](/cg/lib) folder.
 Ds Demo is a simple ray-tracing application built on top of Ds. The headers,
 source files, and a Windows binary are available in the
 [apps/cgdemo/](/apps/cgdemo) folder. The Solution and project files for
-Visual Studio 2019 are in the
-[apps/cgdemo/build/vs2019](/apps/cgdemo/build/vs2019).
+Visual Studio 2022 are in the
+[apps/cgdemo/build/vs2022](/apps/cgdemo/build/vs2022).
 
 ![cgdemo]
 
-The ray-tracing relies on bounding volume hierarchies (BVHs) for accelerating
+The ray tracing relies on bounding volume hierarchies (BVHs) for accelerating
 ray/object intersections. Also, the code includes a scene reader with a LL(1)
 parser. The grammar for the specification of a scene and its scene objects is
 [here](/apps/cgdemo/reader/grammar.txt). The scene file shown in this example
@@ -49,7 +49,7 @@ Ds-Vis is a simple "[VTK]-like" scientific visualization library extending Ds.
 The API contains classes and templates for datasets and processes. A dataset
 consists of a structure (geometry and topology defined by vertices and cells)
 and attributes (e.g., scalars and/or vectors at vertices and cells). The API
-provides classes for point sets, triangle meshes, triangle mesh intancing,
+provides classes for point sets, triangle meshes, triangle mesh instancing,
 and sets of graphics primitives containing points, lines, and triangles.
 Processes can be sources (dataset producers), filters (dataset transformers),
 and sinks (dataset consumers). Processes are connected to each other in a
@@ -58,8 +58,8 @@ of another filter or sink. A mapper is a type of sink capable of rendering its
 input dataset. Every actor in a scene has a mapper.
 
 All headers and source files of Ds-Vis are in the [cgvis/](/cgvis) folder.
-The project file for Visual Studio 2019 is located in the
-[cgvis/build/vs2019/](/cgvis/build/vs2019) folder. A pre-compiled binary is
+The project file for Visual Studio 2022 is located in the
+[cgvis/build/vs2022/](/cgvis/build/vs2022) folder. A pre-compiled binary is
 available in the [cgvis/lib/](/cgvis/lib) folder.
 
 ### Ds-Vis Demo
@@ -67,21 +67,21 @@ available in the [cgvis/lib/](/cgvis/lib) folder.
 Ds-Vis Demo is a visualization application built using Ds and Ds-Vis. The
 headers, source files, and a Windows binary are available in the
 [apps/cgvisdemo/](/apps/cgvisdemo) folder. The Solution and project files for
-Visual Studio 2019 are in the
-[apps/cgvisdemo/build/vs2019](/apps/cgvisdemo/build/vs2019).
+Visual Studio 2022 are in the
+[apps/cgvisdemo/build/vs2022](/apps/cgvisdemo/build/vs2022).
 
 ![cgvisdemo]
 
 ## Upcoming Changes
 
-Some of the goals for 2022 are:
+Some of the goals for 2023 are:
 
 - Full API documentation
 - CMake project and support for macOS and Linux with Clang and GCC
-- Textured ans transparent materials
+- Textured and transparent materials
 - ~~Basic scientific visualization API~~
 - Demos for 2D/3D neighbor particle searching with regular grids and
-quadtrees/octress
+quadtrees/octrees
 - Bézier and B-spline curves and surfaces rendering API
 
 ## Credits

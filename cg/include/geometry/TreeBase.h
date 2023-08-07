@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2014, 2022 Paulo Pagliosa.                        |
+//| Copyright (C) 2014, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,7 +28,7 @@
 // Class definition for quadtree/octree base.
 //
 // Author: Paulo Pagliosa
-// Last revision: 19/05/2022
+// Last revision: 12/01/2023
 
 #ifndef __TreeBase_h
 #define __TreeBase_h
@@ -81,7 +81,7 @@ public:
   }
 
 #ifdef _COLORED_TREE
-  int color;
+  mutable int color;
 #endif // _COLORED_TREE
 
   virtual ~TreeNodeBase() = default;
@@ -144,7 +144,7 @@ public:
     return false;
   }
 
-  auto* child(int index) const
+  auto child(int index) const
   {
     assert(index >= 0 && index < N);
     return _children[index];
@@ -195,7 +195,8 @@ class TreeBranchNode: public TreeBranchNodeBase<D>,
   public ContentHolder<T>
 {
 public:
-  template <typename Node> Node* createChild(int index)
+  template <typename Node>
+  Node* createChild(int index)
   {
     auto child = new Node;
 
@@ -243,6 +244,11 @@ public:
     return _depth;
   }
 
+  auto maxDepth() const
+  {
+    return _maxDepth;
+  }
+
 protected:
   using Node = TreeNodeBase<D>;
   using BranchNode = TreeBranchNodeBase<D>;
@@ -267,7 +273,7 @@ protected:
     _maxDepth{maxDepth}
   {
     if (maxDepth < 1 || maxDepth > 64)
-      throw std::logic_error("TreeBase(): bad max depth");
+      throw std::logic_error("TreeBase: bad max depth");
     _depthMask = sizeBits(maxDepth - 1);
     root->_parent = nullptr;
     root->_index = -1;
@@ -312,6 +318,8 @@ TreeBase<D>::clear()
     delete _root->_children[i];
     _root->_children[i] = nullptr;
   }
+  _leafCount = 0;
+  _branchCount = 1;
 }
 
 template <int D>
@@ -387,9 +395,20 @@ public:
   }
 
 #ifdef _COLORED_TREE
+  const auto& color() const
+  {
+    return _node->color;
+  }
+
   auto& color()
   {
     return _node->color;
+  }
+
+  template <typename I>
+  void setColor(I color)
+  {
+    _node->color = (int)color;
   }
 #endif // _COLORED_TREE
 
@@ -556,12 +575,12 @@ public:
     return this->_node->parent()->index();
   }
 
-  const data_type& data() const
+  const auto& data() const
   {
     return leafNode()->data();
   }
 
-  data_type& data()
+  auto& data()
   {
     return leafNode()->data();
   }
@@ -636,7 +655,7 @@ public:
 
   static void setFatFactor(real s)
   {
-    if (s > 1)
+    if (s >= 1)
       _fatFactor = s;
   }
 
@@ -802,7 +821,7 @@ protected:
     --this->_leafCount;
   }
 
-  BranchNode* splitEmpty(LeafNode* leaf)
+  BranchNode* splitEmptyLeaf(LeafNode* leaf)
   {
     if (leaf->depth() == this->_maxDepth)
       return nullptr;
@@ -830,6 +849,16 @@ protected:
     return _resolution * real(this->sizeBits(this->_maxDepth - depth));
   }
 
+  static auto leafNode(const leaf_iterator& lit)
+  {
+    return lit.leafNode();
+  }
+
+  static auto leafIterator(LeafNode* leaf, const key_type& key)
+  {
+    return leaf_iterator{leaf, key};
+  }
+
 private:
   struct NodeIt
   {
@@ -839,8 +868,7 @@ private:
     NodeIt() = default;
 
     NodeIt(TreeNodeBase<D>* node, const key_type& key):
-      node{node},
-      key{key}
+      node{node}, key{key}
     {
       // do nothing
     }
@@ -855,7 +883,7 @@ private:
       return node < other.node;
     }
 
-    static NodeIt null()
+    static auto null()
     {
       NodeIt n;
 
@@ -897,6 +925,8 @@ RegionTree<D, real, LT, BT>::RegionTree(const bounds_type& bounds,
   TreeBase<D>{new BranchNode(), maxDepth},
   _bounds{bounds}
 {
+  if (bounds.empty())
+    throw std::runtime_error("RegionTree: empty bounds");
   _bounds.inflate(_fatFactor);
   _resolution = _bounds.size() * (1 / real(this->sizeBits(maxDepth)));
   _scale = _resolution.inverse();
@@ -1046,6 +1076,6 @@ RegionTree<D, real, LT, BT>::balanceTree()
   }
 }
 
-} // namespace cg
+} // end namespace cg
 
 #endif // __TreeBase_h

@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2016, 2021 Paulo Pagliosa.                        |
+//| Copyright (C) 2016, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,7 +28,7 @@
 // Class definition for point quadtree/octree base.
 //
 // Author: Paulo Pagliosa
-// Last revision: 25/05/2022
+// Last revision: 28/01/2023
 
 #ifndef __PointTreeBase_h
 #define __PointTreeBase_h
@@ -47,30 +47,29 @@ namespace cg
 // PointTreeBase: point tree base class
 // =============
 template <int D, typename real, typename PA, typename IL>
-class PointTreeBase: public RegionTree<D, real, IL>, public PointHolder<PA>
+class PointTreeBase: public RegionTree<D, real, IL>,
+  public PointHolder<D, real, PA>
 {
 protected:
-  ASSERT_INDEX_LIST(IL, "IndexList expected");
+  ASSERT_INDEX_LIST(IL, "Index list expected");
 
   using Base = RegionTree<D, real, IL>;
-  using PointSet = PointHolder<PA>;
+  using PointSet = PointHolder<D, real, PA>;
 
-  PointTreeBase(const PA& points,
-    uint32_t maxDepth = 20,
-    bool squared = false):
-    Base{PointSet::computeBounds<D, real>(points, squared), maxDepth},
-    PointSet(points)
+  PointTreeBase(const Bounds<real, D>& bounds,
+    PA& points,
+    uint32_t maxDepth = 20):
+    Base{bounds, maxDepth},
+    PointSet{points}
   {
     // do nothing
   }
 
-  template <typename P>
-  PointTreeBase(PointTreeBase<D, real, P, IL>&& other, const PA& points):
+  PointTreeBase(PointTreeBase<D, real, PA, IL>&& other):
     Base{std::move(other)},
-    PointSet(points)
+    PointSet{other.points()}
   {
-    if (points.size() != other.points().size())
-      throw std::logic_error("PointTreeBase(): bad points");
+    // do nothing
   }
 
 }; // PointTreeBase
@@ -80,78 +79,125 @@ protected:
 //
 // PointTree: generic point tree class
 // =========
-template <int D, typename real, typename PA, typename IL = IndexList>
+template <int D, typename real, typename PA, typename IL = IndexList<>>
 class PointTree: public PointTreeBase<D, real, PA, IL>
 {
 public:
-  using type = PointTree<D, real, PA, IL>;
   using Base = PointTreeBase<D, real, PA, IL>;
-  using key_type = TreeKey<D>;
+  using PointSet = typename Base::PointSet;
+  using point_id = typename IL::value_type;
+  using pid_list = IndexList<point_id>;
   using vec_type = Vector<real, D>;
-  using KNN = KNNHelper<vec_type>;
+  using key_type = TreeKey<D>;
+  using bounds_type = Bounds<real, D>;
+  using KNN = KNNHelper<vec_type, point_id>;
+  using tree_type = PointTree<D, real, PA, IL>;
+  using leaf_iterator = typename Base::leaf_iterator;
 
-  using SplitTest = std::function<bool(const PA&, IL&, int)>;
+  using SplitTest = std::function<bool(const PA&, IL&, uint32_t)>;
 
-  PointTree(const PA& points,
-    SplitTest spliTest,
+  PointTree(const bounds_type& bounds,
+    PA& points,
+    SplitTest splitTest,
     uint32_t maxDepth = 20,
-    bool squared = true);
+    bool fullTree = false);
 
-  PointTree(const PA& points,
+  PointTree(const bounds_type& bounds,
+    PA& points,
     uint32_t splitThreshold = 20,
     uint32_t maxDepth = 20,
-    bool squared = true):
-    type{points, defaultSplitTest(splitThreshold), maxDepth, squared}
+    bool fullTree = false):
+    tree_type{bounds,
+      points,
+      defaultSplitTest(splitThreshold),
+      maxDepth,
+      fullTree}
   {
     // do nothing
   }
 
-  template <typename P>
-  PointTree(PointTree<D, real, P>&& other, const PA& points):
-    Base{std::move(other), points},
+  PointTree(PA& points,
+    SplitTest splitTest,
+    uint32_t maxDepth = 20,
+    bool fullTree = false,
+    bool squared = true):
+    tree_type{PointSet::computeBounds(points, squared),
+      points,
+      splitTest,
+      maxDepth,
+      fullTree}
+  {
+    // do nothing
+  }
+
+  PointTree(PA& points,
+    uint32_t splitThreshold = 20,
+    uint32_t maxDepth = 20,
+    bool fullTree = false,
+    bool squared = true):
+    tree_type{points,
+      defaultSplitTest(splitThreshold),
+      maxDepth,
+      fullTree,
+      squared}
+  {
+    // do nothing
+  }
+
+  PointTree(PointTree<D, real, PA, IL>&& other):
+    Base{std::move(other)},
     _splitTest{other._splitTest}
   {
     // do nothing
   }
 
-  void rebuild()
+  void rebuild(bool clear, bool fullTree = false)
   {
-    this->clear();
-    build();
+    if (clear)
+      this->clear();
+    build(fullTree);
   }
 
   int findNearestNeighbors(const vec_type& point,
     int k,
-    int indices[],
+    point_id indices[],
     real* distances = nullptr,
     typename KNN::Norm norm = KNN::squaredNorm) const;
 
-  size_t findNeighbors(const vec_type& point, real radius, IndexList& list) const;
+  size_t findNeighbors(const vec_type& point,
+    real radius,
+    pid_list& list) const;
 
-  size_t findNeighbors(int i, real radius, IndexList& list) const
+  size_t findNeighbors(int i, real radius, pid_list& list) const
   {
-    return findNeighbors(vec_type{this->_points[i]}, radius, list);
+    return findNeighbors(vec_type{this->points()[i]}, radius, list);
   }
 
 protected:
   using BranchNode = typename Base::BranchNode;
   using LeafNode = typename Base::LeafNode;
 
-  void addPoint(const vec_type& point, int i)
+  SplitTest _splitTest;
+
+  bool addPoint(const vec_type& point, point_id i)
   {
-    this->makeLeaf(this->key(point))->data().add(i);
+    if (this->bounds().contains(point))
+      return this->makeLeaf(this->key(point))->data().add(i);
+    return false;
   }
 
-  void addPoint(const vec_type& point,
-    int i,
+  void movePoint(const vec_type& point,
+    point_id i,
     uint64_t mask,
     BranchNode* branch)
   {
     this->makeLeaf(this->key(point), mask, branch)->data().add(i);
   }
 
-  bool splitChildren(BranchNode* branch);
-  bool split(LeafNode* leaf);
+  void removePoints();
+
+  bool splitChildren(BranchNode* branch, bool fullTree);
+  bool split(LeafNode* leaf, bool fullTree);
 
   void moveDataToChildren(LeafNode* leaf,
     BranchNode* branch,
@@ -161,7 +207,7 @@ protected:
     real radius,
     const key_type& key,
     BranchNode* branch,
-    IndexList& list) const;
+    pid_list& list) const;
 
   real knnSearch(KNN& knn,
     real r2,
@@ -169,45 +215,46 @@ protected:
     BranchNode* branch) const;
 
 private:
-  SplitTest _splitTest;
-
   static SplitTest defaultSplitTest(uint32_t splitThreshold)
   {
-    return [=](const PA&, IL& list, int) -> bool
+    return [=](const PA&, IL& list, uint32_t) -> bool
     {
       return list.size() > splitThreshold;
     };
   }
 
-  void build();
+  void build(bool = false);
 
 }; // PointTree
 
 template <int D, typename real, typename PA, typename IL>
-PointTree<D, real, PA, IL>::PointTree(const PA& points,
+PointTree<D, real, PA, IL>::PointTree(const bounds_type& bounds,
+  PA& points,
   SplitTest splitTest,
-  uint32_t maxDepth, bool squared):
-  Base{points, maxDepth, squared},
+  uint32_t maxDepth,
+  bool fullTree):
+  Base{bounds, points, maxDepth},
   _splitTest{splitTest}
 {
-  build();
+  build(fullTree);
 }
 
 template <int D, typename real, typename PA, typename IL>
 void
-PointTree<D, real, PA, IL>::build()
+PointTree<D, real, PA, IL>::build(bool fullTree)
 {
-  using index_type = decltype(this->_points.size());
+  const auto& points = this->points();
 
-  for (index_type n = this->_points.size(), i = 0; i < n; ++i)
-    addPoint(this->_points[i], int(i));
+  for (point_id n = points.size(), i = 0; i < n; ++i)
+    if (this->activePoint(i))
+      addPoint(points[i], i);
   if (_splitTest != nullptr)
-    splitChildren(this->root());
+    splitChildren(this->root(), fullTree);
 }
 
 template <int D, typename real, typename PA, typename IL>
 bool
-PointTree<D, real, PA, IL>::splitChildren(BranchNode* branch)
+PointTree<D, real, PA, IL>::splitChildren(BranchNode* branch, bool fullTree)
 {
   if (branch->depth() + 1 == this->_maxDepth)
     return false;
@@ -216,25 +263,38 @@ PointTree<D, real, PA, IL>::splitChildren(BranchNode* branch)
   auto s = false;
 
   for (int i = 0; i < N; i++)
-    if (auto child = branch->child(i))
-      s |= split((LeafNode *)child);
+  {
+    auto child = branch->child(i);
+
+    if (child == nullptr)
+    {
+      if (fullTree)
+        child = this->createLeafChild(branch, i);
+      else
+        continue;
+    }
+    s |= child->isLeaf() ? split((LeafNode*)child, fullTree) :
+      splitChildren((BranchNode*)child, fullTree);
+  }
   return s;
 }
 
 template <int D, typename real, typename PA, typename IL>
 bool
-PointTree<D, real, PA, IL>::split(LeafNode* leaf)
+PointTree<D, real, PA, IL>::split(LeafNode* leaf, bool fullTree)
 {
-  if (!_splitTest(this->_points, leaf->data(), leaf->depth()))
+  const auto& points = this->points();
+
+  if (!_splitTest(points, leaf->data(), leaf->depth()))
     return false;
 
   auto branch = this->createBranchInPlaceOf(leaf);
   uint64_t mask{this->_depthMask >> branch->depth()};
 
   for (auto index : leaf->data())
-    addPoint(this->_points[index], index, mask, branch);
+    movePoint(points[index], index, mask, branch);
   this->deleteLeaf(leaf);
-  return splitChildren(branch);
+  return splitChildren(branch, fullTree);
 }
 
 template <int D, typename real, typename PA, typename IL>
@@ -245,50 +305,61 @@ PointTree<D, real, PA, IL>::moveDataToChildren(LeafNode* leaf,
 {
   (void)key;
 
+  const auto& points = this->points();
   uint64_t mask{this->_depthMask >> branch->depth()};
 
   for (auto index : leaf->data())
   {
-    auto i = this->key(this->_points[index]).childIndex(mask);
+    auto i = this->key(points[index]).childIndex(mask);
     auto child = (LeafNode *)branch->child(i);
 
     child->data().add(index);
   }
 }
 
-namespace ptb
-{ // begin namespace ptb
+template <int D, typename real, typename PA, typename IL>
+void
+PointTree<D, real, PA, IL>::removePoints()
+{
+  auto& points = this->points();
+
+  for (auto cell = this->leafBegin(); !cell.isNull(); ++cell)
+    for (auto& pids = cell.data(); !pids.empty();)
+    {
+      auto pit = pids.begin();
+      auto pid = *pit;
+
+      pids.remove(pit);
+      points.remove(pid);
+    }
+}
+
+namespace internal::pt
+{ // begin namespace internal::pt
 
 template <typename real>
-inline real
+inline auto
 searchSize2(real d2, real r2)
 {
   return d2 * real(0.25) + r2 + sqrt(d2 * r2);
 }
 
 template <typename real>
-inline constexpr real
-epsilon()
+inline constexpr auto
+eps(real x)
 {
-  return std::numeric_limits<real>::epsilon();
+  return std::numeric_limits<real>::epsilon() + x;
 }
 
-template <typename real>
-inline constexpr real
-inf()
-{
-  return std::numeric_limits<real>::max();
-}
-
-} // end namespace ptb
+} // end namespace internal::pt
 
 template <int D, typename real, typename PA, typename IL>
 size_t
 PointTree<D, real, PA, IL>::findNeighbors(const vec_type& p,
   real radius,
-  IndexList& list) const
+  pid_list& list) const
 {
-  if (/*!this->bounds().contains(p) || */ radius <= 0)
+  if (/*!this->bounds().contains(p) || */radius <= 0)
     return 0;
   list.clear();
   radiusSearch(p, radius * radius, key_type{0LL}, this->root(), list);
@@ -301,11 +372,12 @@ PointTree<D, real, PA, IL>::radiusSearch(const vec_type& p,
   real r2,
   const key_type& key,
   BranchNode* branch,
-  IndexList& list) const
+  pid_list& list) const
 {
-  auto depth = branch->depth() + 1;
-  auto s2 = ptb::searchSize2(this->nodeSize(depth).squaredNorm(), r2);
   constexpr auto N = (int)ipow2<D>();
+  auto depth = branch->depth() + 1;
+  auto s2 = internal::pt::searchSize2(this->nodeSize(depth).squaredNorm(), r2);
+  const auto& points = this->points();
 
   for (int i = 0; i < N; i++)
     if (auto child = branch->child(i))
@@ -313,13 +385,13 @@ PointTree<D, real, PA, IL>::radiusSearch(const vec_type& p,
       auto childKey = key_type(key).pushChild(i);
       auto d2 = (p - this->center(childKey, depth)).squaredNorm();
 
-      if (ptb::epsilon<real>() + d2 > s2)
+      if (internal::pt::eps(d2) > s2)
         continue;
       if (!child->isLeaf())
         radiusSearch(p, r2, childKey, (BranchNode*)child, list);
       else
         for (auto index : ((LeafNode*)child)->data())
-          if ((p - this->_points[index]).squaredNorm() <= r2)
+          if ((p - points[index]).squaredNorm() <= r2)
             list.add(index);
     }
 }
@@ -328,7 +400,7 @@ template <int D, typename real, typename PA, typename IL>
 int
 PointTree<D, real, PA, IL>::findNearestNeighbors(const vec_type& p,
   int k,
-  int indices[],
+  point_id indices[],
   real* distances,
   typename KNN::Norm norm) const
 {
@@ -338,13 +410,14 @@ PointTree<D, real, PA, IL>::findNearestNeighbors(const vec_type& p,
   */
 
   KNN knn{p, k, norm};
-  auto n = this->_points.size();
+  const auto& points = this->points();
+  auto n = points.size();
 
   if (n <= k)
-    for (int i = 0; i < n; ++i)
-      knn.test(this->_points[i], i);
+    for (decltype(n) i = 0; i < n; ++i)
+      knn.test(points[i], i);
   else
-    knnSearch(knn, ptb::inf<real>(), key_type{0LL}, this->root());
+    knnSearch(knn, math::Limits<real>::inf(), key_type{0LL}, this->root());
   return knn.results(indices, distances);
 }
 
@@ -385,8 +458,12 @@ PointTree<D, real, PA, IL>::knnSearch(KNN& knn,
 
       nq.insert(d2, NodeEntry{child, childKey});
     }
+
+  const auto& points = this->points();
+
   for (auto n = nq.size(), i = 0;
-    i < n && ptb::epsilon<real>() + nq.key(i) <= ptb::searchSize2(n2, r2);
+    i < n &&
+    internal::pt::eps(nq.key(i)) <= internal::pt::searchSize2(n2, r2);
     ++i)
   {
     const auto& e = nq.value(i);
@@ -395,7 +472,7 @@ PointTree<D, real, PA, IL>::knnSearch(KNN& knn,
       r2 = knnSearch(knn, r2, e.key, (BranchNode*)e.node);
     else
       for (auto index : ((LeafNode*)e.node)->data())
-        knn.test(this->_points[index], index, r2);
+        knn.test(points[index], index, r2);
   }
   return r2;
 }

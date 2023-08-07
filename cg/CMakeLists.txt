@@ -7,7 +7,6 @@ if(POLICY CMP0072)
 endif()
 
 add_library(${PROJECT_NAME} STATIC
-    ./include/graphics/TriangleMeshMapper.cpp
     externals/src/gl3w.c
     externals/src/imgui_draw.cpp
     externals/src/imgui_impl_glfw.cpp
@@ -20,7 +19,6 @@ add_library(${PROJECT_NAME} STATIC
     src/core/NameableObject.cpp
     src/debug/AnimatedAlgorithm.cpp
     src/geometry/BVH.cpp
-    src/geometry/IndexList.cpp
     src/geometry/MeshSweeper.cpp
     src/geometry/TriangleMesh.cpp
     src/geometry/TriangleMeshBVH.cpp
@@ -60,6 +58,7 @@ add_library(${PROJECT_NAME} STATIC
     src/graphics/SceneWindowBase.cpp
     src/graphics/Shape.cpp
     src/graphics/TransformableObject.cpp
+    src/graphics/TriangleMeshMapper.cpp
     src/graphics/TriangleMeshShape.cpp
     src/utils/MeshReader.cpp
 )
