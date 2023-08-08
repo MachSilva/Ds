@@ -32,6 +32,7 @@ add_library(${PROJECT_NAME} STATIC
     src/graph/Transform.cpp
     src/graphics/Application.cpp
     src/graphics/Assets.cpp
+    src/graphics/AssetFolder.cpp
     src/graphics/Camera.cpp
     src/graphics/Color.cpp
     src/graphics/GLFramebuffer.cpp

@@ -6,6 +6,8 @@ add_executable(cgdemo
     Main.cpp
     MainWindow.cpp
     RayTracer.cpp
+    SceneWriter.cpp
+    Writer.cpp
     reader/AbstractParser.cpp
     reader/Buffer.cpp
     reader/ErrorHandler.cpp
