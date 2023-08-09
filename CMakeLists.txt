@@ -18,6 +18,8 @@ set(CMAKE_CUDA_STANDARD_REQUIRED TRUE)
 
 if(WIN32)
   set(CMAKE_SHARED_LIBRARY_PREFIX "")
+elseif(UNIX)
+  set(CMAKE_EXECUTABLE_SUFFIX ".out")
 endif()
 
 if(USE_CUDA)
@@ -32,6 +34,7 @@ add_subdirectory(cg)
 add_subdirectory(cgvis)
 add_subdirectory(apps/cgdemo)
 add_subdirectory(apps/cgvisdemo)
+add_subdirectory(apps/template)
 
 if(USE_CUDA)
   # CUDA projects
