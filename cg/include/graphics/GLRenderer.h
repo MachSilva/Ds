@@ -37,6 +37,7 @@
 #include "graphics/GLGraphics3.h"
 #include "graphics/GLRendererBase.h"
 #include <functional>
+#include <span>
 #include <sstream>
 
 namespace cg
@@ -164,6 +165,18 @@ public:
   GLuint subroutineIndex(const char* name) const
   {
     return glGetSubroutineIndex(_handle, _stage, name);
+  }
+
+  GLuint subroutineUniformLocation(const char* name) const
+  {
+    return glGetSubroutineUniformLocation(_handle, _stage, name);
+  }
+
+  GLint activeSubroutineUniformLocations() const
+  {
+    GLint e;
+    glGetProgramStageiv(_handle, _stage, GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS, &e);
+    return e;
   }
 
   std::string infoLog() const
@@ -430,6 +443,15 @@ public:
   GLuint lineColorMixIdx() const { return _lineColorMixIdx; }
   GLuint modelMaterialIdx() const { return _modelMaterialIdx; }
   GLuint colorMapMaterialIdx() const { return _colorMapMaterialIdx; }
+  GLuint mixColorLoc() const { return _mixColorLoc; }
+  GLuint matPropsLoc() const { return _matPropsLoc; }
+
+  auto fragmentSubroutineUniformsCount() const { return _fragmentSubroutineUniforms.size(); }
+
+  std::span<GLuint> fragmentSubroutineUniforms()
+  {
+    return { _fragmentSubroutineUniforms.begin(), _fragmentSubroutineUniforms.end() };
+  }
 
 protected:
   Reference<GLSL::ShaderProgram> _vertex, _geometry, _fragment;
@@ -442,6 +464,10 @@ protected:
   GLuint _lineColorMixIdx;
   GLuint _modelMaterialIdx;
   GLuint _colorMapMaterialIdx;
+  GLuint _mixColorLoc;
+  GLuint _matPropsLoc;
+
+  std::vector<GLuint> _fragmentSubroutineUniforms{};
 };
 
 
