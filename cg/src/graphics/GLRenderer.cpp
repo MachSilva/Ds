@@ -675,18 +675,26 @@ GLRenderer::drawAxes(const mat4f& m, float s)
   GLGraphics3::drawAxes(vec3f{m[3]}, r, s);
 }
 
-void
-GLRenderer::setPipeline(uint32_t code, Pipeline* p)
+GLRenderer::Pipeline*
+GLRenderer::pipeline(uint64_t id) const
 {
-  assert(code < PipelineCode::Max);
-  if (code == 0)
+  auto it = _pipelines.find(id);
+  if (it == _pipelines.end())
+    return nullptr;
+  return it->second.get();
+}
+
+void
+GLRenderer::setPipeline(uint64_t id, Pipeline* p)
+{
+  if (id == 0)
   {
     if (auto q = dynamic_cast<MeshPipeline*>(p))
       _pipelines[0] = _gl = q;
   }
   else
   {
-    _pipelines[code] = p;
+    _pipelines[id] = p;
   }
 }
 

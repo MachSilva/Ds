@@ -39,6 +39,7 @@
 #include <functional>
 #include <span>
 #include <sstream>
+#include <unordered_map>
 
 namespace cg
 { // begin namespace cg
@@ -197,52 +198,38 @@ private:
   GLint _link = 0;
 };
 
-class RendererProgram
+} // namespace GLSL
+
+template<std::size_t N>
+struct _string8_id
 {
-public:
-  void setMatrixBlockBinding(GLuint binding) const
+  static_assert(N <= 8, "Your ID string must have at most 8 characters.");
+  constexpr _string8_id(const char s[N+1]) noexcept
   {
-    setBinding(_matrixBlockIdx, binding);
+    id = 0;
+    for (auto i = 0u; i < N; i++)
+      id |= uint64_t(s[i]) << (8*i);
   }
-
-  void setConfigBlockBinding(GLuint binding) const
-  {
-    setBinding(_configBlockIdx, binding);
-  }
-
-  void setLightingBlockBinding(GLuint binding) const
-  {
-    setBinding(_lightingBlockIdx, binding);
-  }
-
-protected:
-  RendererProgram(GLuint program) : _handle{program}
-  {
-    _matrixBlockIdx = glGetUniformBlockIndex(_handle, "MatrixBlock");
-    _configBlockIdx = glGetUniformBlockIndex(_handle, "ConfigBlock");
-    _lightingBlockIdx = glGetUniformBlockIndex(_handle, "LightingBlock");
-  }
-
-  void setBinding(GLuint index, GLuint binding) const
-  {
-    if (index != GL_INVALID_INDEX)
-    {
-      glUniformBlockBinding(_handle, index, binding);
-    }
-    else
-    {
-      // error
-    }
-  }
-
-private:
-  GLuint _handle;
-  GLuint _matrixBlockIdx;
-  GLuint _configBlockIdx;
-  GLuint _lightingBlockIdx;
+  uint64_t id;
 };
 
-} // namespace GLSL
+#define REDEFINE_ID8(str8,value) template<> \
+  struct _pipeline_id<str8> { static constexpr const uint64_t id = value; };
+
+template<std::size_t N>
+_string8_id(const char (&s)[N]) -> _string8_id<N-1>;
+
+template<_string8_id S>
+struct _pipeline_id { static constexpr const auto id = S.id; };
+
+template<_string8_id S>
+constexpr uint64_t operator""_ID8() { return _pipeline_id<S>::id; }
+
+REDEFINE_ID8("Default",  0)
+REDEFINE_ID8("Mesh",     0)
+REDEFINE_ID8("Sphere",   0x01)
+REDEFINE_ID8("Surface",  0x02)
+REDEFINE_ID8("Particle", 0x03)
 
 //////////////////////////////////////////////////////////
 //
@@ -251,8 +238,6 @@ private:
 class GLRenderer: public GLRendererBase, public GLGraphics3
 {
 public:
-  constexpr static auto maxLights = 8;
-
   using RenderFunction = std::function<void(GLRenderer&)>;
   using GLGraphics3::drawMesh;
 
@@ -366,24 +351,21 @@ public:
    */
   GLSL::ShaderProgram* fragmentShader();
 
-  enum PipelineCode
-  {
-    Default = 0, Mesh = 0,
-    Sphere  = 0x01,
-    Surface = 0x02,
-    Custom  = 0x10,
-    Custom1 = 0x11,
-    Custom2 = 0x12,
-    Custom3 = 0x13,
-    Max     = 0x20
-  };
-
   class Pipeline;
   class MeshPipeline;
 
-  Pipeline* pipeline(uint32_t code) const { return _pipelines[code].get(); }
+  enum PipelineId : std::uint64_t
+  {
+    Default  = "Default"_ID8,
+    Mesh     = "Mesh"_ID8,
+    Sphere   = "Sphere"_ID8,
+    Surface  = "Surface"_ID8,
+    Particle = "Particle"_ID8
+  };
 
-  void setPipeline(uint32_t code, Pipeline* p);
+  Pipeline* pipeline(uint64_t id) const;
+
+  void setPipeline(uint64_t id, Pipeline* p);
 
 protected:
   RenderFunction _renderFunction{};
@@ -401,7 +383,7 @@ protected:
 
   void renderDefaultLights();
 
-  Reference<Pipeline> _pipelines[PipelineCode::Max] {};
+  std::unordered_map<uint64_t,Reference<Pipeline>> _pipelines {0x10};
   Reference<MeshPipeline> _gl; // Default pipeline. Listed in _pipelines[0].
 
 }; // GLRenderer
