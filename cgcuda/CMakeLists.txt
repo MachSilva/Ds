@@ -1,14 +1,13 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
 
 project(cgcuda)
 
-set(CGCUDA_SOURCES src/CUDAHelper.cpp)
+add_library(cgcuda STATIC
+    src/CUDAHelper.cpp
+)
 
-add_library(${PROJECT_NAME} STATIC ${CGCUDA_SOURCES})
-
-target_include_directories(${PROJECT_NAME}
-    PUBLIC
-        ${PROJECT_SOURCE_DIR}/include/
+target_include_directories(cgcuda PUBLIC
+    ${CMAKE_CURRENT_LIST_DIR}/include
 )
 
 target_link_libraries(cgcuda cg)

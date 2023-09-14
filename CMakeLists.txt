@@ -16,9 +16,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_CUDA_STANDARD 20)
 set(CMAKE_CUDA_STANDARD_REQUIRED TRUE)
 
-if(WIN32)
-  set(CMAKE_SHARED_LIBRARY_PREFIX "")
-elseif(UNIX)
+if(UNIX)
   set(CMAKE_EXECUTABLE_SUFFIX ".out")
 endif()
 
@@ -26,8 +24,6 @@ if(USE_CUDA)
   add_definitions(-D_USE_CUDA)
   include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 endif()
-
-add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GL3W)
 
 # Projects where CUDA is optional
 add_subdirectory(cg)
