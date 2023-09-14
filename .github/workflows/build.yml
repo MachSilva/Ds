@@ -20,4 +20,21 @@ jobs:
         cmake -B cmake-build -DCMAKE_BUILD_TYPE=Release
     
     - name: Build
-      run: make -C cmake-build
+      run: make -C cmake-build -j`nproc`
+
+  windows:
+    runs-on: windows-2022
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install MSBuild
+      uses: microsoft/setup-msbuild@v1
+    
+    - name: Build cgdemo
+      run: |
+        msbuild apps\cgdemo\build\vs2022\cgdemo.sln -t:cgdemo:rebuild -verbosity:diag -property:Configuration=Release
+
+    - name: Build cgvisdemo
+      run: |
+        msbuild apps\cgvisdemo\build\vs2022\cgvisdemo.sln -t:cgvisdemo:rebuild -verbosity:diag -property:Configuration=Release
