@@ -90,7 +90,7 @@ Developed by [Paulo Pagliosa](https://www.facom.ufms.br/~pagliosa).
 
 ## License
 
-Ds is licensed under the zlib License, see [LICENCE.txt](/LICENSE.txt)
+Ds is licensed under the zlib License, see [LICENSE.txt](/LICENSE.txt)
 for more information.
 
 ## Contact

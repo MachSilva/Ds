@@ -461,7 +461,7 @@ public:
    * When binding a pipeline for drawing an object, call `beforeDrawing`
    * before a draw call to set some default uniform values needed by shaders.
    * As matter of fact, the reason why this function member was created is for
-   * setting values for subroutine uniforms, since it's state is always lost
+   * setting values for subroutine uniforms, since their state are always lost
    * when the currently bound program/pipeline is changed.
    * 
    * You may assign your own function to change the pipeline behavior.
