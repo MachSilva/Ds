@@ -29,14 +29,16 @@
 //
 // Author: Paulo Pagliosa
 // Modified by: Felipe Machado
-// Last revision: 21/07/2023
+// Last revision: 13/09/2023
 
 #ifndef __GLRenderer_h
 #define __GLRenderer_h
 
 #include "graphics/GLGraphics3.h"
 #include "graphics/GLRendererBase.h"
+#include <cstring>
 #include <functional>
+#include <memory>
 #include <span>
 #include <sstream>
 #include <unordered_map>
@@ -67,9 +69,11 @@ struct alignas(16) mat3
   mat3& operator = (const mat3&) = default;
 };
 
-// IMPORTANT: KEEP the data structures defined here in SYNC with the ones used in the shaders.
-// Also, do not forget to use std140 layout and align the fields within 16 bytes.
-// Prefer declaring fields with bigger storage needs earlier. (mat4 > mat3 > vec4 > vec3 > int)
+// IMPORTANT: KEEP the data structures defined here in SYNC with the ones used
+// in the shaders. Also, do not forget to use std140 layout and align the fields
+// within 16 bytes.
+// Prefer declaring fields with bigger storage needs earlier.
+// (mat4 > mat3 > vec4 > vec3 > int)
 
 struct alignas(16) LightProps
 {
@@ -138,13 +142,21 @@ class ShaderProgram : public SharedObject
 public:
   ShaderProgram() = default;
 
-  ShaderProgram(GLuint stage, const char* source) : ShaderProgram(stage, 1, &source) {}
+  ShaderProgram(GLuint stage, const char* source)
+    : ShaderProgram(stage, 1, &source) {}
 
   ShaderProgram(GLuint stage, uint32_t count, const char* const sources[])
     : _stage{stage}
   {
     _handle = glCreateShaderProgramv(stage, count, sources);
     glGetProgramiv(_handle, GL_LINK_STATUS, &_link);
+    auto n = activeSubroutineUniformLocations();
+    _subroutineUniformsCount = n;
+    if (n > 0)
+    {
+      _subroutineUniforms = std::make_unique<GLuint[]>(n);
+      memset(_subroutineUniforms.get(), 0, sizeof (GLuint[n]));
+    }
   }
 
   ShaderProgram(GLuint stage, std::initializer_list<const char*> sources)
@@ -176,8 +188,16 @@ public:
   GLint activeSubroutineUniformLocations() const
   {
     GLint e;
-    glGetProgramStageiv(_handle, _stage, GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS, &e);
+    glGetProgramStageiv(_handle,
+      _stage,
+      GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS,
+      &e);
     return e;
+  }
+
+  std::span<GLuint> subroutineUniforms()
+  {
+    return { _subroutineUniforms.get(), _subroutineUniformsCount };
   }
 
   std::string infoLog() const
@@ -192,10 +212,12 @@ public:
     return log;
   }
 
-private:
+protected:
   GLuint _stage = 0;
   GLuint _handle = 0;
   GLint _link = 0;
+  uint32_t _subroutineUniformsCount = 0;
+  std::unique_ptr<GLuint[]> _subroutineUniforms = nullptr;
 };
 
 } // namespace GLSL
@@ -240,6 +262,8 @@ class GLRenderer: public GLRendererBase, public GLGraphics3
 public:
   using RenderFunction = std::function<void(GLRenderer&)>;
   using GLGraphics3::drawMesh;
+
+  class PhongFragShader;
 
   /// Constructs a GL renderer object.
   GLRenderer(SceneBase& scene, Camera& camera);
@@ -347,9 +371,21 @@ public:
    * Also, this shader contains two subroutines that must be set before every
    * draw call.
    * 
-   * @return GLSL::ShaderProgram* Fragment shader program.
+   * @return GLRenderer::PhongFragShader* Fragment shader program.
    */
-  GLSL::ShaderProgram* fragmentShader();
+  PhongFragShader* fragmentShader();
+
+  /**
+   * Helper member function to assign default values for fragment shader
+   * subroutine uniforms based on current `GLRenderer` context.
+   * 
+   * @note Every time a bound program/pipeline is changed, the subroutine
+   * uniforms' states are lost. So, if you are willing to use `GLRenderer`'s
+   * fragment shader in your custom pipeline, you'll need to reassign subroutine
+   * uniforms every time by calling `glUniformSubroutinesuiv` or you may use
+   * this member function.
+   */
+  void defaultFragmentSubroutines();
 
   class Pipeline;
   class MeshPipeline;
@@ -395,16 +431,58 @@ public:
 
   operator GLuint () const { return _pipeline; }
 
-  void use()
+  void use() const
   {
     glUseProgram(0);
     glBindProgramPipeline(_pipeline);
   }
 
+  /**
+   * @brief Callback function that should be called just before a draw call.
+   * 
+   * When binding a pipeline for drawing an object, call `beforeDrawing`
+   * before a draw call to set some default uniform values needed by shaders.
+   * As matter of fact, the reason why this function member was created is for
+   * setting values for subroutine uniforms, since it's state is always lost
+   * when the currently bound program/pipeline is changed.
+   * 
+   * You may assign your own function to change the pipeline behavior.
+   * 
+   * @warning This variable may be null.
+   */
+  std::function<void(GLRenderer&)> beforeDrawing {};
+
 protected:
   Pipeline();
 
   GLuint _pipeline;
+};
+
+class GLRenderer::PhongFragShader : public GLSL::ShaderProgram
+{
+public:
+  PhongFragShader(std::initializer_list<const char*> sources);
+  ~PhongFragShader() override;
+
+  const auto& mixColor() const { return _mixColor; }
+  const auto& matProps() const { return _matProps; }
+
+protected:
+  // `mixColor` subroutine type
+  struct MixColorSRType
+  {
+    GLuint location;
+    GLuint noMixIdx;
+    GLuint lineColorMixIdx;
+  } _mixColor;
+
+  // `matProps` subroutine type
+  struct MatPropsSRType
+  {
+    GLuint location;
+    GLuint colorMapMaterialIdx;
+    GLuint modelMaterialIdx;
+  } _matProps;
 };
 
 class GLRenderer::MeshPipeline : public GLRenderer::Pipeline
@@ -415,55 +493,43 @@ public:
 
   GLSL::ShaderProgram* vertex() { return _vertex; }
   GLSL::ShaderProgram* geometry() { return _geometry; }
-  GLSL::ShaderProgram* fragment() { return _fragment; }
+  PhongFragShader* fragment() { return _fragment; }
 
-  GLBuffer<GLSL::LightingBlock>& lightingBlock() const { return *_lightingBlock; }
-  GLBuffer<GLSL::MatrixBlock>& matrixBlock() const { return *_matrixBlock; }
-  GLBuffer<GLSL::ConfigBlock>& configBlock() const { return *_configBlock; }
+  GLBuffer<GLSL::LightingBlock>& lightingBlock() const
+  { return *_lightingBlock; }
 
-  GLuint noMixIdx() const { return _noMixIdx; }
-  GLuint lineColorMixIdx() const { return _lineColorMixIdx; }
-  GLuint modelMaterialIdx() const { return _modelMaterialIdx; }
-  GLuint colorMapMaterialIdx() const { return _colorMapMaterialIdx; }
-  GLuint mixColorLoc() const { return _mixColorLoc; }
-  GLuint matPropsLoc() const { return _matPropsLoc; }
+  GLBuffer<GLSL::MatrixBlock>& matrixBlock() const
+  { return *_matrixBlock; }
 
-  auto fragmentSubroutineUniformsCount() const { return _fragmentSubroutineUniforms.size(); }
-
-  std::span<GLuint> fragmentSubroutineUniforms()
-  {
-    return { _fragmentSubroutineUniforms.begin(), _fragmentSubroutineUniforms.end() };
-  }
+  GLBuffer<GLSL::ConfigBlock>& configBlock() const
+  { return *_configBlock; }
 
 protected:
-  Reference<GLSL::ShaderProgram> _vertex, _geometry, _fragment;
+  Reference<GLSL::ShaderProgram> _vertex, _geometry;
+  Reference<PhongFragShader> _fragment;
 
   Reference<GLBuffer<GLSL::LightingBlock>> _lightingBlock;
   Reference<GLBuffer<GLSL::MatrixBlock>> _matrixBlock;
   Reference<GLBuffer<GLSL::ConfigBlock>> _configBlock;
-
-  GLuint _noMixIdx;
-  GLuint _lineColorMixIdx;
-  GLuint _modelMaterialIdx;
-  GLuint _colorMapMaterialIdx;
-  GLuint _mixColorLoc;
-  GLuint _matPropsLoc;
-
-  std::vector<GLuint> _fragmentSubroutineUniforms{};
 };
 
+inline GLBuffer<GLSL::LightingBlock>&
+GLRenderer::lightingBlock() { return _gl->lightingBlock(); }
 
-inline GLBuffer<GLSL::LightingBlock>& GLRenderer::lightingBlock() { return _gl->lightingBlock(); }
+inline GLBuffer<GLSL::MatrixBlock>&
+GLRenderer::matrixBlock() { return _gl->matrixBlock(); }
 
-inline GLBuffer<GLSL::MatrixBlock>& GLRenderer::matrixBlock() { return _gl->matrixBlock(); }
+inline GLBuffer<GLSL::ConfigBlock>&
+GLRenderer::configBlock() { return _gl->configBlock(); }
 
-inline GLBuffer<GLSL::ConfigBlock>& GLRenderer::configBlock() { return _gl->configBlock(); }
+inline GLSL::ShaderProgram*
+GLRenderer::vertexShader() { return _gl->vertex(); }
 
-inline GLSL::ShaderProgram* GLRenderer::vertexShader() { return _gl->vertex(); }
+inline GLSL::ShaderProgram*
+GLRenderer::geometryShader() { return _gl->geometry(); }
 
-inline GLSL::ShaderProgram* GLRenderer::geometryShader() { return _gl->geometry(); }
-
-inline GLSL::ShaderProgram* GLRenderer::fragmentShader() { return _gl->fragment(); }
+inline GLRenderer::PhongFragShader*
+GLRenderer::fragmentShader() { return _gl->fragment(); }
 
 } // end namespace cg
 
