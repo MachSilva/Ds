@@ -156,7 +156,7 @@ public:
     if (n > 0)
     {
       _subroutineUniforms = std::make_unique<GLuint[]>(n);
-      memset(_subroutineUniforms.get(), 0, sizeof (GLuint[n]));
+      memset(_subroutineUniforms.get(), 0, n * sizeof (GLuint));
     }
   }
 
