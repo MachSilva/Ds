@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2014, 2023 Paulo Pagliosa.                        |
+//| Copyright (C) 2023 Paulo Pagliosa.                              |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -23,83 +23,52 @@
 //|                                                                 |
 //[]---------------------------------------------------------------[]
 //
-// OVERVIEW: GLMesh.h
+// OVERVIEW: CameraHolder.h
 // ========
-// Class definition for OpenGL mesh array object.
+// Class definition for camera holder.
 //
 // Author: Paulo Pagliosa
-// Last revision: 28/08/2023
+// Last revision: 29/08/2023
 
-#ifndef __GLMesh_h
-#define __GLMesh_h
+#ifndef __CameraHolder_h
+#define __CameraHolder_h
 
-#include "geometry/TriangleMesh.h"
-#include "graphics/GLBuffer.h"
+#include "graphics/Camera.h"
 
 namespace cg
 { // begin namespace cg
 
-using GLColorBuffer = GLBuffer<Color>;
-
 
 /////////////////////////////////////////////////////////////////////
 //
-// GLMesh: OpenGL mesh array object class
-// ======
-class GLMesh: public SharedObject
+// CameraHolder: camera holder class
+// ============
+class CameraHolder: public SharedObject
 {
 public:
-  /// Constructs a GLMesh object.
-  GLMesh(const TriangleMesh& mesh);
-
-  /// Destructor.
-  ~GLMesh()
+  Camera* camera() const
   {
-    glDeleteBuffers(4, _buffers);
-    glDeleteVertexArrays(1, &_vao);
+    return _camera;
   }
 
-  void bind()
+  void setCamera(Camera* camera)
   {
-    glBindVertexArray(_vao);
+    if (camera != _camera.get())
+      (_camera = camera ? camera : new Camera{})->update();
   }
 
-  auto vertexCount() const
+protected:
+  CameraHolder(Camera* camera = nullptr):
+    _camera{!camera ? new Camera{} : camera}
   {
-    return _vertexCount;
+    // do nothing
   }
-
-  void setColors(GLColorBuffer* colors, int location = 3);
 
 private:
-  GLuint _vao;
-  GLuint _buffers[4];
-  int _vertexCount;
+  Reference<Camera> _camera;
 
-}; // GLMesh
-
-inline GLMesh*
-asGLMesh(SharedObject* object)
-{
-  return dynamic_cast<GLMesh*>(object);
-}
-
-inline GLMesh*
-glMesh(const TriangleMesh* mesh)
-{
-  if (nullptr == mesh)
-    return nullptr;
-
-  auto ma = asGLMesh(mesh->userData);
-
-  if (nullptr == ma)
-  {
-    ma = new GLMesh{*mesh};
-    mesh->userData = ma;
-  }
-  return ma;
-}
+}; // CameraHolder
 
 } // end namespace cg
 
-#endif // __GLMesh_h
+#endif // __CameraHolder_h

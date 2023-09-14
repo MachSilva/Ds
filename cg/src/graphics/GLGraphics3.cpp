@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2014, 2022 Paulo Pagliosa.                        |
+//| Copyright (C) 2014, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,7 +28,7 @@
 // Source file for OpenGL 3D graphics.
 //
 // Author: Paulo Pagliosa
-// Last revision: 11/03/2022
+// Last revision: 04/09/2023
 
 #include "geometry/MeshSweeper.h"
 #include "graphics/GLGraphics3.h"
@@ -228,7 +228,11 @@ GLGraphics3::GLGraphics3():
 }
 
 void
-GLGraphics3::drawMesh(const TriangleMesh& mesh, const mat4f& t, const mat3f& n)
+GLGraphics3::drawMesh(const TriangleMesh& mesh,
+  const mat4f& t,
+  const mat3f& n,
+  int count,
+  int offset)
 {
   auto cp = GLSL::Program::current();
 
@@ -243,7 +247,10 @@ GLGraphics3::drawMesh(const TriangleMesh& mesh, const mat4f& t, const mat3f& n)
   auto m = glMesh(&mesh);
 
   m->bind();
-  glDrawElements(GL_TRIANGLES, m->vertexCount(), GL_UNSIGNED_INT, 0);
+  glDrawElements(GL_TRIANGLES,
+    count * 3,
+    GL_UNSIGNED_INT,
+    (void*)(sizeof(TriangleMesh::Triangle) * offset));
   GLSL::Program::setCurrent(cp);
 }
 
@@ -254,6 +261,28 @@ GLGraphics3::drawMesh(const TriangleMesh& mesh,
   const vec3f& s)
 {
   drawMesh(mesh, TRS(p, r, s), normalMatrix(r, s));
+}
+
+bool
+GLGraphics3::drawSubMesh(const TriangleMesh& mesh,
+  int count,
+  int offset,
+  const mat4f& t,
+  const mat3f& n)
+{
+  {
+    if (count <= 0 || offset < 0)
+      return false;
+
+    const auto nt = mesh.data().triangleCount;
+
+    if (offset >= nt)
+      return false;
+    if (auto end = offset + count; end > nt)
+      count = end - nt;
+  }
+  drawMesh(mesh, t, n, count, offset);
+  return true;
 }
 
 void
@@ -511,7 +540,7 @@ void
 GLGraphics3::drawAxis(const vec3f& p,
   const vec3f& d,
   float scale,
-  TriangleMesh& glyph)
+  const TriangleMesh& glyph)
 {
   mat3f r;
   vec3f q;

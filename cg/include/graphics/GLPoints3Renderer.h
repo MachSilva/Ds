@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2014, 2023 Paulo Pagliosa.                        |
+//| Copyright (C) 2023 Paulo Pagliosa.                              |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -23,83 +23,97 @@
 //|                                                                 |
 //[]---------------------------------------------------------------[]
 //
-// OVERVIEW: GLMesh.h
+// OVERVIEW: GLPoints3Renderer.h
 // ========
-// Class definition for OpenGL mesh array object.
+// Class definition for OpenGL 3D points renderer.
 //
 // Author: Paulo Pagliosa
-// Last revision: 28/08/2023
+// Last revision: 05/09/2023
 
-#ifndef __GLMesh_h
-#define __GLMesh_h
+#ifndef __GLPoints3Renderer_h
+#define __GLPoints3Renderer_h
 
-#include "geometry/TriangleMesh.h"
-#include "graphics/GLBuffer.h"
+#include "graphics/CameraHolder.h"
+#include "graphics/GLGraphics3.h"
+#include "graphics/GLPoints3.h"
 
 namespace cg
 { // begin namespace cg
 
-using GLColorBuffer = GLBuffer<Color>;
-
 
 /////////////////////////////////////////////////////////////////////
 //
-// GLMesh: OpenGL mesh array object class
-// ======
-class GLMesh: public SharedObject
+// GLPoints3Renderer: OpenGL 3D points renderer class
+// =================
+class GLPoints3Renderer: public CameraHolder
 {
 public:
-  /// Constructs a GLMesh object.
-  GLMesh(const TriangleMesh& mesh);
+  bool usePointColors{};
 
-  /// Destructor.
-  ~GLMesh()
+  GLPoints3Renderer(Camera* camera = nullptr):
+    CameraHolder{camera}
   {
-    glDeleteBuffers(4, _buffers);
-    glDeleteVertexArrays(1, &_vao);
+    // do nothing
   }
 
-  void bind()
+  void begin();
+
+  void setPointColor(const Color& color)
   {
-    glBindVertexArray(_vao);
+    _program.setUniformVec4(_program.pointColorLoc, color);
   }
 
-  auto vertexCount() const
+  void setPointSize(float size)
   {
-    return _vertexCount;
+    _pointSize = size;
   }
 
-  void setColors(GLColorBuffer* colors, int location = 3);
+  void render(const GLPoints3& points, const mat4f& t)
+  {
+    drawPoints(points, t, (int)points.size(), 0);
+  }
+
+  void render(const GLPoints3& points)
+  {
+    render(points, mat4f::identity());
+  }
+
+  void render(const GLPoints3&, const vec3f&, const mat3f&, const vec3f&);
+  void render(const GLPoints3&, int, const mat4f&);
+
+  void end();
 
 private:
-  GLuint _vao;
-  GLuint _buffers[4];
-  int _vertexCount;
-
-}; // GLMesh
-
-inline GLMesh*
-asGLMesh(SharedObject* object)
-{
-  return dynamic_cast<GLMesh*>(object);
-}
-
-inline GLMesh*
-glMesh(const TriangleMesh* mesh)
-{
-  if (nullptr == mesh)
-    return nullptr;
-
-  auto ma = asGLMesh(mesh->userData);
-
-  if (nullptr == ma)
+  struct GLState
   {
-    ma = new GLMesh{*mesh};
-    mesh->userData = ma;
-  }
-  return ma;
-}
+    GLSL::Program* program;
+    float pointSize;
+    int vao;
+  };
+
+  struct GLProgram: public GLSL::Program
+  {
+    GLint mvpMatrixLoc;
+    GLint usePointColorsLoc;
+    GLint pointColorLoc;
+
+    GLProgram();
+
+  private:
+    void initProgram();
+    void initUniformLocations();
+
+  }; // GLProgram
+
+  GLProgram _program;
+  GLState _lastState;
+  float _pointSize{1};
+
+  void updateView();
+  void drawPoints(const GLPoints3&, const mat4f&, int, int);
+
+}; // GLPoints3Renderer
 
 } // end namespace cg
 
-#endif // __GLMesh_h
+#endif // __GLPoints3Renderer_h

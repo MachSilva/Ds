@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2014, 2018 Paulo Pagliosa.                        |
+//| Copyright (C) 2014, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,8 +28,9 @@
 // Source file for GLSL program.
 //
 // Author: Paulo Pagliosa
-// Modified by; Felipe Machado
-// Last revision: 19/09/2022
+// Last revision: 28/08/2023
+// Altered by: Felipe Machado
+// Altered version last revision: 19/09/2022
 
 #include "graphics/GLProgram.h"
 #include <cstdarg>
@@ -338,6 +339,7 @@ Program::use()
       break;
     case State::MODIFIED:
       link();
+      [[fallthrough]];
     case State::BUILT:
       if (_current != nullptr)
         _current->_state = State::BUILT;

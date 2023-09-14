@@ -28,8 +28,9 @@
 // Source file for OpenGL window.
 //
 // Author: Paulo Pagliosa
-// Modified by: Felipe Machado
-// Last revision: 04/07/2023
+// Last revision: 05/09/2023
+// Altered by: Felipe Machado
+// Altered version last revision: 04/07/2023
 
 #include "core/Exception.h"
 #include "graphics/Application.h"
@@ -75,10 +76,10 @@ GLWindow::mouseMoveEvent(double xPos, double yPos)
 }
 
 bool
-GLWindow::mouseButtonInputEvent(int button, int actions, int mods)
+GLWindow::mouseButtonInputEvent(int button, int action, int mods)
 {
   (void)button;
-  (void)actions;
+  (void)action;
   (void)mods;
   return false;
 }
@@ -325,11 +326,11 @@ GLWindow::scrollCallBack(GLFWwindow* window, double xOffSet, double yOffSet)
 void
 GLWindow::mouseButtonCallBack(GLFWwindow* window,
   int button,
-  int actions,
+  int action,
   int mods)
 {
-  getWindow(window)->mouseButtonInputEvent(button, actions, mods);
-  ImGui_ImplGlfw_MouseButtonCallback(window, button, actions, mods);
+  getWindow(window)->mouseButtonInputEvent(button, action, mods);
+  ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
 }
 
 void

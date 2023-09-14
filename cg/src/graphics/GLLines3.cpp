@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2014, 2023 Paulo Pagliosa.                        |
+//| Copyright (C) 2023 Paulo Pagliosa.                              |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -23,83 +23,29 @@
 //|                                                                 |
 //[]---------------------------------------------------------------[]
 //
-// OVERVIEW: GLMesh.h
+// OVERVIEW: GLLines3.cpp
 // ========
-// Class definition for OpenGL mesh array object.
+// Source file for OpenGL 3D line buffer object.
 //
 // Author: Paulo Pagliosa
-// Last revision: 28/08/2023
+// Last revision: 29/08/2023
 
-#ifndef __GLMesh_h
-#define __GLMesh_h
-
-#include "geometry/TriangleMesh.h"
-#include "graphics/GLBuffer.h"
+#include "graphics/GLLines3.h"
 
 namespace cg
 { // begin namespace cg
 
-using GLColorBuffer = GLBuffer<Color>;
-
 
 /////////////////////////////////////////////////////////////////////
 //
-// GLMesh: OpenGL mesh array object class
-// ======
-class GLMesh: public SharedObject
+// GLLines3 implementation
+// ========
+GLLines3::GLLines3(const PointArray& points, IndexArray&& lineSizes):
+  GLPoints3{points},
+  _lineEnds(std::move(lineSizes))
 {
-public:
-  /// Constructs a GLMesh object.
-  GLMesh(const TriangleMesh& mesh);
-
-  /// Destructor.
-  ~GLMesh()
-  {
-    glDeleteBuffers(4, _buffers);
-    glDeleteVertexArrays(1, &_vao);
-  }
-
-  void bind()
-  {
-    glBindVertexArray(_vao);
-  }
-
-  auto vertexCount() const
-  {
-    return _vertexCount;
-  }
-
-  void setColors(GLColorBuffer* colors, int location = 3);
-
-private:
-  GLuint _vao;
-  GLuint _buffers[4];
-  int _vertexCount;
-
-}; // GLMesh
-
-inline GLMesh*
-asGLMesh(SharedObject* object)
-{
-  return dynamic_cast<GLMesh*>(object);
-}
-
-inline GLMesh*
-glMesh(const TriangleMesh* mesh)
-{
-  if (nullptr == mesh)
-    return nullptr;
-
-  auto ma = asGLMesh(mesh->userData);
-
-  if (nullptr == ma)
-  {
-    ma = new GLMesh{*mesh};
-    mesh->userData = ma;
-  }
-  return ma;
+  for (size_t n = _lineEnds.size(), i = 1; i < n; ++i)
+    _lineEnds[i] += _lineEnds[i - 1];
 }
 
 } // end namespace cg
-
-#endif // __GLMesh_h

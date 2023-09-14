@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2014, 2023 Paulo Pagliosa.                        |
+//| Copyright (C) 2023 Paulo Pagliosa.                              |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -23,83 +23,69 @@
 //|                                                                 |
 //[]---------------------------------------------------------------[]
 //
-// OVERVIEW: GLMesh.h
+// OVERVIEW: GLPoints3.h
 // ========
-// Class definition for OpenGL mesh array object.
+// Class definition for OpenGL 3D point buffer object.
 //
 // Author: Paulo Pagliosa
-// Last revision: 28/08/2023
+// Last revision: 05/09/2023
 
-#ifndef __GLMesh_h
-#define __GLMesh_h
+#ifndef __GLPoints3_h
+#define __GLPoints3_h
 
-#include "geometry/TriangleMesh.h"
+#include "graphics/Color.h"
 #include "graphics/GLBuffer.h"
+#include "math/Vector3.h"
+#include <vector>
 
 namespace cg
 { // begin namespace cg
+
+class GLPoints3Renderer;
+class GLRenderer;
 
 using GLColorBuffer = GLBuffer<Color>;
 
 
 /////////////////////////////////////////////////////////////////////
 //
-// GLMesh: OpenGL mesh array object class
-// ======
-class GLMesh: public SharedObject
+// GLPoints3: OpenGL 3D point buffer object class
+// =========
+class GLPoints3: public SharedObject
 {
 public:
-  /// Constructs a GLMesh object.
-  GLMesh(const TriangleMesh& mesh);
+  using PointArray = std::vector<vec3f>;
 
-  /// Destructor.
-  ~GLMesh()
+  GLPoints3(const PointArray& points);
+
+  ~GLPoints3()
   {
-    glDeleteBuffers(4, _buffers);
+    glDeleteBuffers(1, &_buffer);
     glDeleteVertexArrays(1, &_vao);
   }
 
-  void bind()
+  auto size() const
+  {
+    return _size;
+  }
+
+  void bind() const
   {
     glBindVertexArray(_vao);
   }
 
-  auto vertexCount() const
-  {
-    return _vertexCount;
-  }
-
-  void setColors(GLColorBuffer* colors, int location = 3);
+  void setColors(GLColorBuffer* colors, int location = 1);
 
 private:
   GLuint _vao;
-  GLuint _buffers[4];
-  int _vertexCount;
+  GLuint _buffer;
+  uint32_t _size;
 
-}; // GLMesh
+  friend GLPoints3Renderer;
+  friend GLRenderer;
 
-inline GLMesh*
-asGLMesh(SharedObject* object)
-{
-  return dynamic_cast<GLMesh*>(object);
-}
-
-inline GLMesh*
-glMesh(const TriangleMesh* mesh)
-{
-  if (nullptr == mesh)
-    return nullptr;
-
-  auto ma = asGLMesh(mesh->userData);
-
-  if (nullptr == ma)
-  {
-    ma = new GLMesh{*mesh};
-    mesh->userData = ma;
-  }
-  return ma;
-}
+}; // GLPoints3
 
 } // end namespace cg
 
-#endif // __GLMesh_h
+#endif // __GLPoints3_h

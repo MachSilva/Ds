@@ -28,8 +28,9 @@
 // Source file for OpenGL renderer.
 //
 // Author: Paulo Pagliosa
-// Modified by: Felipe Machado
-// Last revision: 13/09/2023
+// Last revision: 02/09/2023
+// Altered by: Felipe Machado
+// Altered version last revision: 13/09/2023
 
 #include "graphics/GLRenderer.h"
 
@@ -615,22 +616,23 @@ GLRenderer::renderMaterial(const Material& material)
   glUnmapNamedBuffer(_gl->configBlock());
 }
 
+
 inline mat4f
-mvMatrix(const Camera& c, const Primitive& p)
+mvMatrix(const mat4f& t, const Camera* c)
 {
-  return c.worldToCameraMatrix() * p.localToWorldMatrix();
+  return c->worldToCameraMatrix() * t;
 }
 
 inline mat4f
-mvpMatrix(const mat4f& mvm, const Camera& c)
+mvpMatrix(const mat4f& mvm, const Camera* c)
 {
-  return c.projectionMatrix() * mvm;
+  return c->projectionMatrix() * mvm;
 }
 
-inline mat3f
-normalMatrix(const Camera& c, const Primitive& p)
+inline auto
+normalMatrix(const mat3f& n, const Camera* c)
 {
-  return mat3f{c.worldToCameraMatrix()} * p.normalMatrix();
+  return mat3f{c->worldToCameraMatrix()} * n;
 }
 
 void
@@ -654,40 +656,78 @@ GLRenderer::drawMesh(const Primitive& primitive)
 {
   auto mesh = primitive.tesselate();
 
-  if (nullptr == mesh)
+  if (!mesh)
     return false;
 
+  auto& t = primitive.localToWorldMatrix();
+  auto& n = primitive.normalMatrix();
+
+  drawMesh(*mesh, *primitive.material(), t, n, mesh->data().triangleCount, 0);
+  if (flags.isSet(DrawBounds))
+  {
+    setLineColor(boundsColor);
+    drawBounds(primitive.bounds());
+  }
+  /*
+  setVectorColor(Color::gray);
+  drawNormals(*mesh, t, n, 0.5f);
+  */
+  return true;
+}
+
+void
+GLRenderer::drawMesh(const TriangleMesh& mesh,
+  const Material& material,
+  const mat4f& t,
+  const mat3f& n,
+  int count,
+  int offset)
+{
   auto b = static_cast<GLSL::MatrixBlock*>(
     glMapNamedBuffer(_gl->matrixBlock(), GL_WRITE_ONLY)
   );
 
-  auto mvm = mvMatrix(*_camera, primitive);
+  auto mvm = mvMatrix(t, _camera);
   b->mvMatrix = mvm;
-  b->mvpMatrix = mvpMatrix(mvm, *_camera);
-  b->normalMatrix = normalMatrix(*_camera, primitive);
+  b->mvpMatrix = mvpMatrix(mvm, _camera);
+  b->normalMatrix = normalMatrix(n, _camera);
 
   glUnmapNamedBuffer(_gl->matrixBlock());
 
   // defaultFragmentSubroutines();
   _gl->beforeDrawing(*this);
 
-  renderMaterial(*primitive.material());
-  if (auto m = glMesh(mesh))
+  renderMaterial(material);
+
+  auto m = glMesh(&mesh);
+
+  m->bind();
+  glDrawElements(GL_TRIANGLES,
+    count * 3,
+    GL_UNSIGNED_INT,
+    (void*)(sizeof(TriangleMesh::Triangle) * offset));
+}
+
+bool
+GLRenderer::drawSubMesh(const TriangleMesh& mesh,
+  int count,
+  int offset,
+  const Material& material,
+  const mat4f& t,
+  const mat3f& n)
+{
   {
-    m->bind();
-    glDrawElements(GL_TRIANGLES, m->vertexCount(), GL_UNSIGNED_INT, 0);
-    if (flags.isSet(DrawBounds))
-    {
-      setLineColor(boundsColor);
-      drawBounds(primitive.bounds());
-    }
-    /*
-    setVectorColor(Color::white);
-    drawNormals(*mesh,
-      primitive.localToWorldMatrix(),
-      primitive.normalMatrix());
-    */
+    if (count <= 0 || offset < 0)
+      return false;
+
+    const auto nt = mesh.data().triangleCount;
+
+    if (offset >= nt)
+      return false;
+    if (auto end = offset + count; end > nt)
+      count = end - nt;
   }
+  drawMesh(mesh, material, t, n, count, offset);
   return true;
 }
 

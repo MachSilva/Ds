@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2018, 2022 Paulo Pagliosa.                        |
+//| Copyright (C) 2018, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -28,8 +28,9 @@
 // Class definition for OpenGL Renderer.
 //
 // Author: Paulo Pagliosa
-// Modified by: Felipe Machado
-// Last revision: 13/09/2023
+// Last revision: 02/09/2023
+// Altered by: Felipe Machado
+// Altered version last revision: 13/09/2023
 
 #ifndef __GLRenderer_h
 #define __GLRenderer_h
@@ -261,7 +262,11 @@ class GLRenderer: public GLRendererBase, public GLGraphics3
 {
 public:
   using RenderFunction = std::function<void(GLRenderer&)>;
+  using enum RenderMode;
+
+  using GLGraphics3::drawAxes;
   using GLGraphics3::drawMesh;
+  using GLGraphics3::drawSubMesh;
 
   class PhongFragShader;
 
@@ -270,20 +275,27 @@ public:
 
   /// Destructor.
   ~GLRenderer();
-
-  using GLGraphics3::drawAxes;
   
   void update();
   void render();
-  bool drawMesh(const Primitive& primitive) final;
-  float pixelsLength(float d) const;
+
   void renderMaterial(const Material& material) final;
-  void setBasePoint(const vec3f& p);
+  bool drawMesh(const Primitive& primitive) final;
+
+  bool drawSubMesh(const TriangleMesh& mesh,
+    int count,
+    int offset,
+    const Material& material,
+    const mat4f& t,
+    const mat3f& n);
 
   void setRenderFunction(RenderFunction f)
   {
     _renderFunction = f;
   }
+  
+  void setBasePoint(const vec3f& p);
+  float pixelsLength(float d) const;
 
   /**
    * An uniform buffer containing the current lights of the scene.
@@ -416,6 +428,12 @@ protected:
   virtual void renderLights();
 
   void drawAxes(const mat4f&, float);
+  void drawMesh(const TriangleMesh&,
+    const Material&,
+    const mat4f&,
+    const mat3f&,
+    int,
+    int);
 
   void renderDefaultLights();
 

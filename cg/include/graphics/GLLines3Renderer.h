@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2014, 2023 Paulo Pagliosa.                        |
+//| Copyright (C) 2023 Paulo Pagliosa.                              |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -23,83 +23,97 @@
 //|                                                                 |
 //[]---------------------------------------------------------------[]
 //
-// OVERVIEW: GLMesh.h
+// OVERVIEW: GLLines3Renderer.h
 // ========
-// Class definition for OpenGL mesh array object.
+// Class definition for OpenGL 3D lines renderer.
 //
 // Author: Paulo Pagliosa
-// Last revision: 28/08/2023
+// Last revision: 08/09/2023
 
-#ifndef __GLMesh_h
-#define __GLMesh_h
+#ifndef __GLLines3Renderer_h
+#define __GLLines3Renderer_h
 
-#include "geometry/TriangleMesh.h"
-#include "graphics/GLBuffer.h"
+#include "graphics/CameraHolder.h"
+#include "graphics/GLGraphics3.h"
+#include "graphics/GLLines3.h"
 
 namespace cg
 { // begin namespace cg
 
-using GLColorBuffer = GLBuffer<Color>;
-
 
 /////////////////////////////////////////////////////////////////////
 //
-// GLMesh: OpenGL mesh array object class
-// ======
-class GLMesh: public SharedObject
+// GLLines3Renderer: OpenGL 3D lines renderer class
+// ================
+class GLLines3Renderer: public CameraHolder
 {
 public:
-  /// Constructs a GLMesh object.
-  GLMesh(const TriangleMesh& mesh);
+  bool usePointColors{};
 
-  /// Destructor.
-  ~GLMesh()
+  GLLines3Renderer(Camera* camera = nullptr):
+    CameraHolder{camera}
   {
-    glDeleteBuffers(4, _buffers);
-    glDeleteVertexArrays(1, &_vao);
+    // do nothing
   }
 
-  void bind()
+  void begin();
+
+  void setLineColor(const Color& color)
   {
-    glBindVertexArray(_vao);
+    _program.setUniformVec4(_program.lineColorLoc, color);
   }
 
-  auto vertexCount() const
+  void setLineWidth(float width)
   {
-    return _vertexCount;
+    _lineWidth = width;
   }
 
-  void setColors(GLColorBuffer* colors, int location = 3);
+  void render(const GLLines3& lines, const mat4f& t)
+  {
+    drawLines(lines, t, (int)lines.lineCount(), 0);
+  }
+
+  void render(const GLLines3& lines)
+  {
+    render(lines, mat4f::identity());
+  }
+
+  void render(const GLLines3&, const vec3f&, const mat3f&, const vec3f&);
+  void render(const GLLines3&, int, const mat4f&);
+
+  void end();
 
 private:
-  GLuint _vao;
-  GLuint _buffers[4];
-  int _vertexCount;
-
-}; // GLMesh
-
-inline GLMesh*
-asGLMesh(SharedObject* object)
-{
-  return dynamic_cast<GLMesh*>(object);
-}
-
-inline GLMesh*
-glMesh(const TriangleMesh* mesh)
-{
-  if (nullptr == mesh)
-    return nullptr;
-
-  auto ma = asGLMesh(mesh->userData);
-
-  if (nullptr == ma)
+  struct GLState
   {
-    ma = new GLMesh{*mesh};
-    mesh->userData = ma;
-  }
-  return ma;
-}
+    GLSL::Program* program;
+    float lineWidth;
+    int vao;
+  };
+
+  struct GLProgram: public GLSL::Program
+  {
+    GLint mvpMatrixLoc;
+    GLint usePointColorsLoc;
+    GLint lineColorLoc;
+
+    GLProgram();
+
+  private:
+    void initProgram();
+    void initUniformLocations();
+
+  }; // GLProgram
+
+  GLProgram _program;
+  GLState _lastState;
+  float _lineWidth{1};
+
+  void updateView();
+  void drawLines(const GLLines3&, const mat4f&, int, int);
+
+}; // GLLines3Renderer
 
 } // end namespace cg
 
-#endif // __GLMesh_h
+#endif // __GLLines3Renderer_h

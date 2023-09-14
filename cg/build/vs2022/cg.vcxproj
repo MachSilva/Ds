@@ -144,6 +144,7 @@
     <ClInclude Include="..\..\include\graphics\AssetFolder.h" />
     <ClInclude Include="..\..\include\graphics\Assets.h" />
     <ClInclude Include="..\..\include\graphics\Camera.h" />
+    <ClInclude Include="..\..\include\graphics\CameraHolder.h" />
     <ClInclude Include="..\..\include\graphics\Color.h" />
     <ClInclude Include="..\..\include\graphics\GLBuffer.h" />
     <ClInclude Include="..\..\include\graphics\GLFramebuffer.h" />
@@ -151,8 +152,12 @@
     <ClInclude Include="..\..\include\graphics\GLGraphics3.h" />
     <ClInclude Include="..\..\include\graphics\GLGraphicsBase.h" />
     <ClInclude Include="..\..\include\graphics\GLImage.h" />
+    <ClInclude Include="..\..\include\graphics\GLLines3.h" />
+    <ClInclude Include="..\..\include\graphics\GLLines3Renderer.h" />
     <ClInclude Include="..\..\include\graphics\GLMesh.h" />
     <ClInclude Include="..\..\include\graphics\GLMeshRenderer.h" />
+    <ClInclude Include="..\..\include\graphics\GLPoints3.h" />
+    <ClInclude Include="..\..\include\graphics\GLPoints3Renderer.h" />
     <ClInclude Include="..\..\include\graphics\GLProgram.h" />
     <ClInclude Include="..\..\include\graphics\GLRenderer.h" />
     <ClInclude Include="..\..\include\graphics\GLRendererBase.h" />
@@ -194,6 +199,7 @@
     <ClInclude Include="..\..\include\math\Vector3.h" />
     <ClInclude Include="..\..\include\math\Vector4.h" />
     <ClInclude Include="..\..\include\utils\MeshReader.h" />
+    <ClInclude Include="..\..\include\utils\MeshWriter.h" />
     <ClInclude Include="..\..\include\utils\Stopwatch.h" />
   </ItemGroup>
   <ItemGroup>
@@ -222,8 +228,11 @@
     <ClCompile Include="..\..\src\graphics\GLGraphics3.cpp" />
     <ClCompile Include="..\..\src\graphics\GLGraphicsBase.cpp" />
     <ClCompile Include="..\..\src\graphics\GLImage.cpp" />
+    <ClCompile Include="..\..\src\graphics\GLLines3Renderer.cpp" />
     <ClCompile Include="..\..\src\graphics\GLMesh.cpp" />
     <ClCompile Include="..\..\src\graphics\GLMeshRenderer.cpp" />
+    <ClCompile Include="..\..\src\graphics\GLPoints3.cpp" />
+    <ClCompile Include="..\..\src\graphics\GLPoints3Renderer.cpp" />
     <ClCompile Include="..\..\src\graphics\GLProgram.cpp" />
     <ClCompile Include="..\..\src\graphics\GLRenderer.cpp" />
     <ClCompile Include="..\..\src\graphics\GLRendererBase.cpp" />
@@ -240,6 +249,7 @@
     <ClCompile Include="..\..\src\graphics\SceneEditor.cpp" />
     <ClCompile Include="..\..\src\graphics\SceneWindowBase.cpp" />
     <ClCompile Include="..\..\src\graphics\Shape.cpp" />
+    <ClCompile Include="..\..\src\graphics\GLLines3.cpp" />
     <ClCompile Include="..\..\src\graphics\TransformableObject.cpp" />
     <ClCompile Include="..\..\src\graphics\TriangleMeshMapper.cpp" />
     <ClCompile Include="..\..\src\graphics\TriangleMeshShape.cpp" />
@@ -254,6 +264,10 @@
     <ClCompile Include="..\..\src\utils\MeshReader.cpp">
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">/D_CRT_SECURE_NO_WARNINGS %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">/D_CRT_SECURE_NO_WARNINGS %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\utils\MeshWriter.cpp">
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">/D"_CRT_SECURE_NO_WARNINGS" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">/D"_CRT_SECURE_NO_WARNINGS" %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2014, 2023 Paulo Pagliosa.                        |
+//| Copyright (C) 2023 Paulo Pagliosa.                              |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -23,83 +23,38 @@
 //|                                                                 |
 //[]---------------------------------------------------------------[]
 //
-// OVERVIEW: GLMesh.h
+// OVERVIEW: MeshWriter.h
 // ========
-// Class definition for OpenGL mesh array object.
+// Class definition for mesh writer.
 //
 // Author: Paulo Pagliosa
-// Last revision: 28/08/2023
+// Last revision: 29/08/2023
 
-#ifndef __GLMesh_h
-#define __GLMesh_h
-
-#include "geometry/TriangleMesh.h"
-#include "graphics/GLBuffer.h"
+#include "utils/MeshWriter.h"
+#include <filesystem>
 
 namespace cg
 { // begin namespace cg
 
-using GLColorBuffer = GLBuffer<Color>;
-
 
 /////////////////////////////////////////////////////////////////////
 //
-// GLMesh: OpenGL mesh array object class
-// ======
-class GLMesh: public SharedObject
+// MeshWriter implementation
+// ==========
+bool
+MeshWriter::writeOBJ(const TriangleMesh& mesh, const char* filename)
 {
-public:
-  /// Constructs a GLMesh object.
-  GLMesh(const TriangleMesh& mesh);
+  FILE* file = fopen(filename, "w");
 
-  /// Destructor.
-  ~GLMesh()
-  {
-    glDeleteBuffers(4, _buffers);
-    glDeleteVertexArrays(1, &_vao);
-  }
+  if (file == nullptr)
+    return false;
+  printf("Writing Wavefront OBJ file %s...\n", filename);
 
-  void bind()
-  {
-    glBindVertexArray(_vao);
-  }
+  auto& data = mesh.data();
+  // TODO
 
-  auto vertexCount() const
-  {
-    return _vertexCount;
-  }
-
-  void setColors(GLColorBuffer* colors, int location = 3);
-
-private:
-  GLuint _vao;
-  GLuint _buffers[4];
-  int _vertexCount;
-
-}; // GLMesh
-
-inline GLMesh*
-asGLMesh(SharedObject* object)
-{
-  return dynamic_cast<GLMesh*>(object);
-}
-
-inline GLMesh*
-glMesh(const TriangleMesh* mesh)
-{
-  if (nullptr == mesh)
-    return nullptr;
-
-  auto ma = asGLMesh(mesh->userData);
-
-  if (nullptr == ma)
-  {
-    ma = new GLMesh{*mesh};
-    mesh->userData = ma;
-  }
-  return ma;
+  fclose(file);
+  return true;
 }
 
 } // end namespace cg
-
-#endif // __GLMesh_h
