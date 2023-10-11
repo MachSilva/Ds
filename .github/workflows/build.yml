@@ -33,8 +33,8 @@ jobs:
     
     - name: Build cgdemo
       run: |
-        msbuild apps\cgdemo\build\vs2022\cgdemo.sln -t:cgdemo:rebuild -property:Configuration=Release
+        msbuild apps\cgdemo\build\vs2022\cgdemo.sln -m -t:cgdemo:rebuild -property:Configuration=Release
 
     - name: Build cgvisdemo
       run: |
-        msbuild apps\cgvisdemo\build\vs2022\cgvisdemo.sln -t:cgvisdemo:rebuild -property:Configuration=Release
+        msbuild apps\cgvisdemo\build\vs2022\cgvisdemo.sln -m -t:cgvisdemo:rebuild -property:Configuration=Release
