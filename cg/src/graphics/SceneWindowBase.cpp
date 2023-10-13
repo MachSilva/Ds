@@ -29,6 +29,8 @@
 //
 // Author: Paulo Pagliosa
 // Last revision: 05/09/2023
+// Altered by: Felipe Machado
+// Altered version last revision: 13/10/2023
 
 #include "graphics/Assets.h"
 #include "graphics/Renderer.h"
@@ -617,6 +619,8 @@ SceneWindowBase::inspectMaterial(Material& material)
   ImGui::colorEdit3("Specular", material.specular);
   ImGui::colorEdit3("Transparency", material.transparency);
   ImGui::DragFloat("IOR", &material.ior, 0.01f, 1, 5);
+  ImGui::DragFloat("Metalness", &material.metalness, 0.01f, 0, 1);
+  ImGui::DragFloat("Roughness", &material.roughness, 0.01f, 0, 1);
 }
 
 } // end namespace cg

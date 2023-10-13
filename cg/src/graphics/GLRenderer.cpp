@@ -30,7 +30,7 @@
 // Author: Paulo Pagliosa
 // Last revision: 02/09/2023
 // Altered by: Felipe Machado
-// Altered version last revision: 13/09/2023
+// Altered version last revision: 13/10/2023
 
 #include "graphics/GLRenderer.h"
 
@@ -64,9 +64,11 @@ const char* PROPS_DECLARATIONS = STRINGIFY(
   struct MaterialProps
   {
     vec4 Oa; // ambient color
-    vec4 Od; // diffuse color
-    vec4 Os; // specular spot color
+    vec4 Od; // diffuse color or albedo (PBR)
+    vec4 Os; // specular spot color (Phong) or media refraction ratio (PBR)
     float shine; // specular shininess exponent
+    float roughness; // [PBR]
+    float metalness; // [PBR]
   };
 
   struct LineProps
@@ -191,6 +193,9 @@ static const char* gGeometryShader = STRINGIFY(
 );
 
 static const char* gFragmentShader = STRINGIFY(
+  const float M_PI = 3.14159265358979323846;
+
+  subroutine vec4 shadingType(vec3 P, vec3 N);
   subroutine vec4 mixColorType(vec4 color);
   subroutine void matPropsType(out MaterialProps m);
 
@@ -199,6 +204,7 @@ static const char* gFragmentShader = STRINGIFY(
   layout(location = 2) in vec4 gColor;
   layout(location = 3) noperspective in vec3 gEdgeDistance;
 
+  subroutine uniform shadingType shade;
   subroutine uniform mixColorType mixColor;
   subroutine uniform matPropsType matProps;  
 
@@ -216,9 +222,18 @@ static const char* gFragmentShader = STRINGIFY(
     const float Oa = 0.4;
     const float Od = 0.6;
 
-    m = MaterialProps(gColor * Oa, gColor * Od, vec4(1), material.shine);
+    m = MaterialProps(gColor * Oa, gColor * Od, vec4(1), material.shine, material.roughness, material.metalness);
   }
 
+  /**
+   * @brief Light to point vector.
+   * 
+   * @param i Light index in uniform block
+   * @param P The point
+   * @param L A vector from the point P to the light L
+   * @param d Light intensity
+   * @return bool If point P is illuminated by the light
+   */
   bool lightVector(int i, vec3 P, out vec3 L, out float d)
   {
     int type = lights[i].type;
@@ -272,6 +287,16 @@ static const char* gFragmentShader = STRINGIFY(
     return lights[i].color * f;
   }
 
+  vec3 cameraToPoint(vec3 P)
+  {
+    return projectionType == 0 ?
+      // PERSPECTIVE
+      normalize(P) :
+      // PARALLEL
+      vec3(0, 0, -1);
+  }
+
+  subroutine(shadingType)
   vec4 phong(vec3 P, vec3 N)
   {
     MaterialProps m;
@@ -280,11 +305,7 @@ static const char* gFragmentShader = STRINGIFY(
     matProps(m);
     color = ambientLight * m.Oa;
 
-    vec3 V = projectionType == 0 ?
-      // PERSPECTIVE
-      normalize(P) :
-      // PARALLEL
-      vec3(0, 0, -1);
+    vec3 V = cameraToPoint(P);
 
     if (dot(N, V) > 0)
       //return backFaceColor;
@@ -305,6 +326,78 @@ static const char* gFragmentShader = STRINGIFY(
       }
     }
     return min(color, vec4(1));
+  }
+
+  float G1(float dotNX, float k)
+  {
+    return dotNX / (dotNX * (1 - k) + k);
+  }
+
+  // Smith's geometry shadow-mask function
+  float G(float dotNL, float dotNV, float r)
+  {
+    const float r1 = r + 1;
+    const float k = r1 * r1 * 0.125; // .125 = 1/8
+    return G1(dotNL, k) * G1(dotNV, k);
+  }
+
+  // Microfacet normal distribution function
+  float D(float dotNH, float r)
+  {
+    dotNH = max(dotNH, 0);
+    float a2 = pow(max(r, 1e-3), 4); // a = r^2; a^2 = r^4
+    float d = dotNH * dotNH * (a2 - 1) + 1; // dot(H,N)^2 * (a^2 - 1) + 1
+    return a2 / (M_PI * d*d);
+  }
+
+  // Schlick's approximation for Fresnel reflectance for each wavelength
+  vec4 schlick(vec4 R0, float dotLH)
+  {
+    return R0 + (vec4(1) - R0) * pow(1 - dotLH, 5);
+  }
+
+  subroutine(shadingType)
+  vec4 pbr(vec3 P, vec3 N)
+  {
+    MaterialProps m;
+    vec4 color = vec4(0,0,0,1);
+
+    matProps(m);
+    m.Os.xyz = max(m.Os.xyz, vec3(0.04));
+
+    // V = camera_pos - point; from point to camera
+    vec3 V = - cameraToPoint(P);
+    float dotNV = dot(N, V);
+
+    if (dotNV < 0)
+    {
+      N = -N;
+      dotNV = -dotNV;
+    }
+
+    for (int i = 0; i < lightCount; i++)
+    {
+      vec3 L;
+      float d;
+ 
+      if (lightVector(i, P, L, d))
+      {
+        const float dotNL = dot(N, L);
+        if (dotNL > 1e-7) // Avoid division by zero.
+        {
+          vec4 I = lightColor(i, d);
+          vec3 H = normalize(L + V);
+          vec4 specular = (
+            schlick(m.Os, dot(L, H))
+            * G(dotNL, dotNV, m.roughness)
+            * D(dot(H, N), m.roughness)
+          ) / (4 * dotNL * dotNV);
+          vec4 diffuse = m.Od / M_PI; // Lambertian diffuse
+          color += I * mix(diffuse, specular, m.metalness) * dotNL;
+        }
+      }
+    }
+    return min(M_PI * color, vec4(1));
   }
 
   subroutine(mixColorType)
@@ -333,11 +426,11 @@ static const char* gFragmentShader = STRINGIFY(
 
   void main()
   {
-    fragmentColor = mixColor(phong(gPosition, normalize(gNormal)));
+    fragmentColor = mixColor(shade(gPosition, normalize(gNormal)));
   }
 );
 
-GLRenderer::PhongFragShader::PhongFragShader(
+GLRenderer::FragmentShader::FragmentShader(
   std::initializer_list<const char*> sources
 ) : GLSL::ShaderProgram{GL_FRAGMENT_SHADER, sources}
 {
@@ -345,11 +438,15 @@ GLRenderer::PhongFragShader::PhongFragShader(
   _mixColor.lineColorMixIdx = subroutineIndex("lineColorMix");
   _matProps.modelMaterialIdx = subroutineIndex("modelMaterial");
   _matProps.colorMapMaterialIdx = subroutineIndex("colorMapMaterial");
+  _shade.phongIdx = subroutineIndex("phong");
+  _shade.pbrIdx = subroutineIndex("pbr");
+
   _mixColor.location = subroutineUniformLocation("mixColor");
   _matProps.location = subroutineUniformLocation("matProps");
+  _shade.location = subroutineUniformLocation("shade");
 }
 
-GLRenderer::PhongFragShader::~PhongFragShader()
+GLRenderer::FragmentShader::~FragmentShader()
 {
   // virtual destructor
 }
@@ -387,7 +484,7 @@ GLRenderer::MeshPipeline::MeshPipeline()
     throw std::runtime_error("failed to create geometry shader program\n"
       + _geometry->infoLog());
 
-  _fragment = new GLRenderer::PhongFragShader({
+  _fragment = new GLRenderer::FragmentShader({
     GLSL::VERSION,
     GLSL::PROPS_DECLARATIONS,
     GLSL::LIGHTING_BLOCK_DECLARATION,
@@ -610,6 +707,8 @@ GLRenderer::renderMaterial(const Material& material)
   block->material.Od = material.diffuse;
   block->material.Os = material.spot;
   block->material.shine = material.shine;
+  block->material.roughness = material.roughness;
+  block->material.metalness = material.metalness;
   // block->line.width = material.lineWidth;
   // block->line.color = material.lineColor;
 
@@ -642,12 +741,14 @@ GLRenderer::defaultFragmentSubroutines()
   auto subIds = fs->subroutineUniforms();
   auto& mixColor = fs->mixColor();
   auto& matProps = fs->matProps();
+  auto& shade = fs->shade();
   subIds[mixColor.location] = renderMode == RenderMode::HiddenLines
     ? mixColor.lineColorMixIdx
     : mixColor.noMixIdx;
   subIds[matProps.location] = flags.isSet(UseVertexColors)
     ? matProps.colorMapMaterialIdx
     : matProps.modelMaterialIdx;
+  subIds[shade.location] = shade.pbrIdx;
   glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, subIds.size(), subIds.data());
 }
 

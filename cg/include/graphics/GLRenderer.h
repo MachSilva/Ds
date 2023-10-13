@@ -30,7 +30,7 @@
 // Author: Paulo Pagliosa
 // Last revision: 02/09/2023
 // Altered by: Felipe Machado
-// Altered version last revision: 13/09/2023
+// Altered version last revision: 13/10/2023
 
 #ifndef __GLRenderer_h
 #define __GLRenderer_h
@@ -93,6 +93,8 @@ struct alignas(16) MaterialProps
   vec4f Od; // diffuse color
   vec4f Os; // specular spot color
   float shine; // specular shininess exponent
+  float roughness; // [PBR] [0,1]
+  float metalness; // [PBR] [0,1]
 };
 
 struct alignas(16) LineProps
@@ -268,7 +270,7 @@ public:
   using GLGraphics3::drawMesh;
   using GLGraphics3::drawSubMesh;
 
-  class PhongFragShader;
+  class FragmentShader;
 
   /// Constructs a GL renderer object.
   GLRenderer(SceneBase& scene, Camera& camera);
@@ -383,9 +385,9 @@ public:
    * Also, this shader contains two subroutines that must be set before every
    * draw call.
    * 
-   * @return GLRenderer::PhongFragShader* Fragment shader program.
+   * @return GLRenderer::FragmentShader* Fragment shader program.
    */
-  PhongFragShader* fragmentShader();
+  FragmentShader* fragmentShader();
 
   /**
    * Helper member function to assign default values for fragment shader
@@ -476,14 +478,15 @@ protected:
   GLuint _pipeline;
 };
 
-class GLRenderer::PhongFragShader : public GLSL::ShaderProgram
+class GLRenderer::FragmentShader : public GLSL::ShaderProgram
 {
 public:
-  PhongFragShader(std::initializer_list<const char*> sources);
-  ~PhongFragShader() override;
+  FragmentShader(std::initializer_list<const char*> sources);
+  ~FragmentShader() override;
 
   const auto& mixColor() const { return _mixColor; }
   const auto& matProps() const { return _matProps; }
+  const auto& shade() const { return _shade; }
 
 protected:
   // `mixColor` subroutine type
@@ -501,6 +504,14 @@ protected:
     GLuint colorMapMaterialIdx;
     GLuint modelMaterialIdx;
   } _matProps;
+
+  // `shading` subroutine type
+  struct ShadingSRType
+  {
+    GLuint location;
+    GLuint phongIdx;
+    GLuint pbrIdx;
+  } _shade;
 };
 
 class GLRenderer::MeshPipeline : public GLRenderer::Pipeline
@@ -511,7 +522,7 @@ public:
 
   GLSL::ShaderProgram* vertex() { return _vertex; }
   GLSL::ShaderProgram* geometry() { return _geometry; }
-  PhongFragShader* fragment() { return _fragment; }
+  FragmentShader* fragment() { return _fragment; }
 
   GLBuffer<GLSL::LightingBlock>& lightingBlock() const
   { return *_lightingBlock; }
@@ -524,7 +535,7 @@ public:
 
 protected:
   Reference<GLSL::ShaderProgram> _vertex, _geometry;
-  Reference<PhongFragShader> _fragment;
+  Reference<FragmentShader> _fragment;
 
   Reference<GLBuffer<GLSL::LightingBlock>> _lightingBlock;
   Reference<GLBuffer<GLSL::MatrixBlock>> _matrixBlock;
@@ -546,7 +557,7 @@ GLRenderer::vertexShader() { return _gl->vertex(); }
 inline GLSL::ShaderProgram*
 GLRenderer::geometryShader() { return _gl->geometry(); }
 
-inline GLRenderer::PhongFragShader*
+inline GLRenderer::FragmentShader*
 GLRenderer::fragmentShader() { return _gl->fragment(); }
 
 } // end namespace cg

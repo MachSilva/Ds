@@ -29,6 +29,8 @@
 //
 // Author: Paulo Pagliosa
 // Last revision: 21/04/2023
+// Altered by: Felipe Machado
+// Altered version last revision: 13/10/2023
 
 #ifndef __Material_h
 #define __Material_h
@@ -54,6 +56,8 @@ public:
   Color specular; // specular color
   Color transparency; // transparency color
   float ior; // index of refraction
+  float roughness; // roughness [0,1]
+  float metalness; // metalness [0,1]
 
   static const Material* defaultMaterial();
 
@@ -62,7 +66,9 @@ public:
     diffuse{0.8f * color},
     shine{100},
     transparency{Color::black},
-    ior{1}
+    ior{1},
+    roughness{0.5},
+    metalness{0.5}
   {
     spot = specular = Color::white;
   }
