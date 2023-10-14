@@ -29,6 +29,7 @@
 //
 // Author: Paulo Pagliosa
 // Last revision: 08/09/2023
+// Altered version last revision: 14/10/2023
 
 #ifndef __Color_h
 #define __Color_h
@@ -47,6 +48,24 @@ namespace cg
 class Color
 {
 public:
+  HOST DEVICE
+  static
+  float sRGB2Linear(float c)
+  {
+    return c > 0.04045f
+      ? powf((c + 0.055f) / 1.055f, 2.4f)
+      : (c / 12.92f);
+  }
+
+  HOST DEVICE
+  static
+  float linear2sRGB(float c)
+  {
+    return c < 0.0031308f
+      ? 12.92 * c
+      : 1.055 * powf(c, (1.f / 2.4f)) - 0.055f;
+  }
+
   union
   {
     struct
@@ -87,11 +106,12 @@ public:
     setRGB(c);
   }
 
-  /// Constructs a Color object from (r, g, b, a).
+  /// Constructs a Color object from sRGB encoded color tuple (r, g, b, a).
+  /// Alpha component is expected to be linear.
   HOST DEVICE
-  explicit Color(int r, int g, int b, int a = 255)
+  explicit Color(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255)
   {
-    setRGB(r, g, b, a);
+    fromSRGB(r, g, b, a);
   }
 
   /// Constructs a Color object from v.
@@ -122,14 +142,16 @@ public:
     a = c[3];
   }
 
-  /// Sets this object from (r, g, b, a).
+  /// Sets this object from sRGB encoded color tuple (r, g, b, a).
+  /// Note: alpha component is left unchanged just as Section 8.24
+  /// of the OpenGL 4.5 Core Specification.
   HOST DEVICE
-  void setRGB(int r, int g, int b, int a = 255)
+  void fromSRGB(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255)
   {
-    this->r = r * math::inverse<float>(255);
-    this->g = g * math::inverse<float>(255);
-    this->b = b * math::inverse<float>(255);
-    this->a = a * math::inverse<float>(255);
+    this->r = sRGB2Linear(float(r) * math::inverse<float>(255));
+    this->g = sRGB2Linear(float(g) * math::inverse<float>(255));
+    this->b = sRGB2Linear(float(b) * math::inverse<float>(255));
+    this->a = float(a) * math::inverse<float>(255);
   }
 
   /// Sets this object from v.
@@ -319,6 +341,27 @@ unpackColor(uint32_t c)
   auto b = ((c >> B_SHIFT) & 0xFF) * math::inverse<float>(255);
   auto a = ((c >> A_SHIFT) & 0xFF) * math::inverse<float>(255);
 
+  return Color{r, g, b, a};
+}
+
+inline uint32_t
+pack_sRGB(const Color& c)
+{
+  return packColor(
+    uint32_t(255 * Color::linear2sRGB(c.r)),
+    uint32_t(255 * Color::linear2sRGB(c.g)),
+    uint32_t(255 * Color::linear2sRGB(c.b)),
+    uint32_t(255 * c.a)
+  );
+}
+
+inline Color
+unpack_sRGB(uint32_t c)
+{
+  auto r = uint8_t(((c >> R_SHIFT) & 0xFF) * 255);
+  auto g = uint8_t(((c >> G_SHIFT) & 0xFF) * 255);
+  auto b = uint8_t(((c >> B_SHIFT) & 0xFF) * 255);
+  auto a = uint8_t(((c >> A_SHIFT) & 0xFF) * 255);
   return Color{r, g, b, a};
 }
 
