@@ -176,6 +176,8 @@ GLWindow::centerWindow()
 inline void
 GLWindow::mainLoop()
 {
+  GLint framebuffer_sRGB = glIsEnabled(GL_FRAMEBUFFER_SRGB);
+
   while (!glfwWindowShouldClose(_window))
   {
     // Pool and handle events.
@@ -208,10 +210,18 @@ GLWindow::mainLoop()
         ImGui::EndPopup();
       }
     }
+
+    if (framebuffer_sRGB) glEnable(GL_FRAMEBUFFER_SRGB);
+
     // Update the GUI.
     gui();
     // Render the scene.
     render();
+
+    // ImGui does not rely on automatic colorspace conversion.
+    framebuffer_sRGB = glIsEnabled(GL_FRAMEBUFFER_SRGB);
+    glDisable(GL_FRAMEBUFFER_SRGB);
+
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     glfwSwapBuffers(_window);
