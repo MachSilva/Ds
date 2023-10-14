@@ -109,7 +109,7 @@ public:
   /// Constructs a Color object from sRGB encoded color tuple (r, g, b, a).
   /// Alpha component is expected to be linear.
   HOST DEVICE
-  explicit Color(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255)
+  explicit Color(int r, int g, int b, int a = 255)
   {
     fromSRGB(r, g, b, a);
   }
