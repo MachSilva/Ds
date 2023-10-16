@@ -95,7 +95,9 @@ GLWindow::scrollEvent(double xOffset, double yOffset)
 bool
 GLWindow::windowResizeEvent(int width, int height)
 {
-  glViewport(0, 0, width, height);
+  (void)width;
+  (void)height;
+  glViewport(0, 0, framebufferWidth, framebufferHeight);
   return true;
 }
 
@@ -256,6 +258,7 @@ GLWindow::show(int argc, char** argv)
     runtimeError("OpenGL 4.3 is not supported");
   glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
   registerGlfwCallBacks();
+  glfwGetFramebufferSize(_window, &framebufferWidth, &framebufferHeight);
   // Setup Dear ImGui binding.
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
@@ -294,6 +297,9 @@ void
 GLWindow::windowResizeCallBack(GLFWwindow* window, int width, int height)
 {
   auto self = getWindow(window);
+  
+  glfwGetFramebufferSize(window,
+    &self->framebufferWidth, &self->framebufferHeight);
   
   self->_width = width;
   self->_height = height;

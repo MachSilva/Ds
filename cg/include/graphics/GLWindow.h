@@ -73,6 +73,8 @@ public:
 
 protected:
   Color backgroundColor{Color::gray};
+  int framebufferWidth;
+  int framebufferHeight;
 
   /// Constructs an intance of GLWindow.
   GLWindow(const char* title, int width, int height);

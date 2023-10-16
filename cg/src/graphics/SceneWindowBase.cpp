@@ -118,7 +118,7 @@ SceneWindowBase::initialize()
   assert(scene != nullptr);
   _editor = new SceneEditor{*scene};
 
-  auto w = width(), h = height();
+  auto w = framebufferWidth, h = framebufferHeight;
 
   _editor->setImageSize(w, h);
   _editor->setDefaultView((float)w / (float)h);
@@ -316,7 +316,7 @@ SceneWindowBase::showErrorMessage(const char* message) const
 bool
 SceneWindowBase::windowResizeEvent(int width, int height)
 {
-  _editor->setImageSize(width, height);
+  _editor->setImageSize(framebufferWidth, framebufferHeight);
   //if (_fbo && (_fbo->width() < width || _fbo->height() < height))
     _fbo = nullptr;
   return onResize(width, height);

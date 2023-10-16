@@ -549,7 +549,7 @@ GLRenderer::update()
 {
   // TODO: do it only when camera or viewport has been changed
   GLGraphics3::setView(_camera->position(), vpMatrix(_camera));
-  glViewport(0, 0, _viewport.w, _viewport.h);
+  // glViewport(0, 0, _viewport.w, _viewport.h);
 
   auto w = _viewport.w / 2.0f;
   auto h = _viewport.h / 2.0f;
