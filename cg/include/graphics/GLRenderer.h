@@ -93,8 +93,9 @@ struct alignas(16) MaterialProps
   vec4f Od; // diffuse color
   vec4f Os; // specular spot color
   float shine; // specular shininess exponent
-  float roughness; // [PBR] [0,1]
-  float metalness; // [PBR] [0,1]
+  // PBR
+  float metalness; // [0,1]
+  float roughness; // [0,1]
 };
 
 struct alignas(16) LineProps
@@ -125,6 +126,10 @@ struct ConfigBlock
   MaterialProps material;
   LineProps line;
   int projectionType; // PERSPECTIVE/PARALLEL
+  // Texture presence
+  int hasDiffuseTexture;
+  int hasSpecularTexture;
+  int hasMetalRoughTexture; // green channel: metalness; blue channel: roughness
 };
 
 enum BindingPoints
@@ -282,6 +287,7 @@ public:
   void render();
 
   void renderMaterial(const Material& material) final;
+  // void renderTextures(GLuint diffuse, GLuint specular, GLuint metal_rough)
   bool drawMesh(const Primitive& primitive) final;
 
   bool drawSubMesh(const TriangleMesh& mesh,
@@ -487,6 +493,31 @@ public:
   const auto& mixColor() const { return _mixColor; }
   const auto& matProps() const { return _matProps; }
   const auto& shade() const { return _shade; }
+  const auto& samplers() const { return _samplers; }
+
+  void set_sDiffuse(int textureUnit)
+  {
+    _samplers.sDiffuse.textureUnit = textureUnit;
+    glUniform1i(_samplers.sDiffuse.location, textureUnit);
+  }
+
+  void set_sSpecular(int textureUnit)
+  {
+    _samplers.sSpecular.textureUnit = textureUnit;
+    glUniform1i(_samplers.sSpecular.location, textureUnit);
+  }
+
+  void set_sMetalRough(int textureUnit)
+  {
+    _samplers.sMetalRough.textureUnit = textureUnit;
+    glUniform1i(_samplers.sMetalRough.location, textureUnit);
+  }
+
+  struct SamplerData
+  {
+    GLuint location;
+    GLuint textureUnit;
+  };
 
 protected:
   // `mixColor` subroutine type
@@ -512,6 +543,13 @@ protected:
     GLuint phongIdx;
     GLuint pbrIdx;
   } _shade;
+
+  struct Samplers
+  {
+    SamplerData sDiffuse;
+    SamplerData sSpecular;
+    SamplerData sMetalRough;
+  } _samplers;
 };
 
 class GLRenderer::MeshPipeline : public GLRenderer::Pipeline

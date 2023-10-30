@@ -30,7 +30,7 @@
 // Author: Paulo Pagliosa
 // Last revision: 02/09/2023
 // Altered by: Felipe Machado
-// Altered version last revision: 13/10/2023
+// Altered version last revision: 25/10/2023
 
 #include "graphics/GLRenderer.h"
 
@@ -67,8 +67,9 @@ const char* PROPS_DECLARATIONS = STRINGIFY(
     vec4 Od; // diffuse color or albedo (PBR)
     vec4 Os; // specular spot color (Phong) or media refraction ratio (PBR)
     float shine; // specular shininess exponent
-    float roughness; // [PBR]
-    float metalness; // [PBR]
+    // PBR
+    float metalness;
+    float roughness;
   };
 
   struct LineProps
@@ -106,6 +107,10 @@ const char* CONFIG_BLOCK_DECLARATION = STRINGIFY(
     LineProps line;
     int projectionType; // PERSPECTIVE/PARALLEL
     //vec4 backFaceColor = vec4(1, 0, 1, 1);
+    // Texture presence
+    int hasDiffuseTexture;
+    int hasSpecularTexture;
+    int hasMetalRoughTexture; // green: roughness; blue: metalness
   };
 );
 
@@ -208,12 +213,28 @@ static const char* gFragmentShader = STRINGIFY(
   subroutine uniform mixColorType mixColor;
   subroutine uniform matPropsType matProps;  
 
+  uniform sampler2D sDiffuse;
+  uniform sampler2D sSpecular;
+  uniform sampler2D sMetalRough;
+
   layout(location = 0) out vec4 fragmentColor;
 
   subroutine(matPropsType)
   void modelMaterial(out MaterialProps m)
   {
     m = material;
+
+    if (hasDiffuseTexture != 0)
+      m.Od = texture(sDiffuse, gColor.xy);
+    if (hasSpecularTexture != 0)
+      m.Os = texture(sSpecular, gColor.xy);
+
+    if (hasMetalRoughTexture != 0)
+    {
+      vec4 value = texture(sMetalRough, gColor.xy);
+      m.roughness = value.y;
+      m.metalness = value.z;
+    }
   }
 
   subroutine(matPropsType)
@@ -221,8 +242,11 @@ static const char* gFragmentShader = STRINGIFY(
   {
     const float Oa = 0.4;
     const float Od = 0.6;
+    const float metalness = 0.04;
+    const float roughness = 0.9;
 
-    m = MaterialProps(gColor * Oa, gColor * Od, vec4(1), material.shine, material.roughness, material.metalness);
+    m = MaterialProps(gColor * Oa, gColor * Od, vec4(1),
+      material.shine, metalness, roughness);
   }
 
   /**
@@ -444,6 +468,15 @@ GLRenderer::FragmentShader::FragmentShader(
   _mixColor.location = subroutineUniformLocation("mixColor");
   _matProps.location = subroutineUniformLocation("matProps");
   _shade.location = subroutineUniformLocation("shade");
+
+  _samplers.sDiffuse.location = glGetUniformLocation(_handle, "sDiffuse");
+  _samplers.sSpecular.location = glGetUniformLocation(_handle, "sSpecular");
+  _samplers.sMetalRough.location = glGetUniformLocation(_handle, "sMetalRough");
+
+  glUseProgram(_handle);
+  set_sDiffuse(0);
+  set_sSpecular(1);
+  set_sMetalRough(2);
 }
 
 GLRenderer::FragmentShader::~FragmentShader()
@@ -711,6 +744,10 @@ GLRenderer::renderMaterial(const Material& material)
   block->material.metalness = material.metalness;
   // block->line.width = material.lineWidth;
   // block->line.color = material.lineColor;
+
+  block->hasDiffuseTexture = 0;
+  block->hasSpecularTexture = 0;
+  block->hasMetalRoughTexture = 0;
 
   glUnmapNamedBuffer(_gl->configBlock());
 }
