@@ -34,6 +34,7 @@
 #define __SharedObject_h
 
 #include <concepts>
+#include <utility>
 
 namespace cg
 { // begin namespace cg
@@ -133,6 +134,22 @@ public:
     // do nothing
   }
 
+  template<typename U, typename = std::enable_if_t<std::is_base_of_v<T,U>>>
+  Reference(const Reference<U>& other):
+    _ptr{T::makeUse(other.get())}
+  {
+    // allow construction of Reference<T> from a Reference<U> if U is a
+    // derived class of T
+  }
+
+  template<typename U, typename = std::enable_if_t<std::is_base_of_v<T,U>>>
+  Reference(Reference<U>&& other) noexcept:
+    _ptr{T::makeUse(other.get())}
+  {
+    // other._ptr is private for us
+    other = std::move(Reference<U>(nullptr));
+  }
+
   ~Reference()
   {
     T::release(_ptr);
@@ -146,13 +163,6 @@ public:
   auto& operator =(Reference&& other) noexcept
   {
     std::swap(_ptr, other._ptr);
-    return *this;
-  }
-
-  auto& operator =(const T* ptr)
-  {
-    T::release(_ptr);
-    _ptr = T::makeUse(ptr);
     return *this;
   }
 
