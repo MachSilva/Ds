@@ -90,7 +90,7 @@ struct alignas(16) LightProps
 struct alignas(16) MaterialProps
 {
   vec4f Oa; // ambient color
-  vec4f Od; // diffuse color
+  vec4f Od; // diffuse color (Phong) or base color (PBR)
   vec4f Os; // specular spot color
   float shine; // specular shininess exponent
   // PBR
@@ -127,6 +127,7 @@ struct ConfigBlock
   LineProps line;
   int projectionType; // PERSPECTIVE/PARALLEL
   // Texture presence
+  int hasEnvironmentTexture;
   int hasDiffuseTexture;
   int hasSpecularTexture;
   int hasMetalRoughTexture; // green channel: metalness; blue channel: roughness
@@ -276,6 +277,7 @@ public:
   using GLGraphics3::drawSubMesh;
 
   class FragmentShader;
+  class EnvironmentProgram;
 
   /// Constructs a GL renderer object.
   GLRenderer(SceneBase& scene, Camera& camera);
@@ -304,6 +306,12 @@ public:
   
   void setBasePoint(const vec3f& p);
   float pixelsLength(float d) const;
+
+  // Any negative value disables the environment texture fetching.
+  void setEnvironmentTextureUnit(int texture)
+  {
+    _environmentTextureUnit = texture;
+  }
 
   /**
    * An uniform buffer containing the current lights of the scene.
@@ -423,12 +431,16 @@ public:
 
   void setPipeline(uint64_t id, Pipeline* p);
 
+  // TODO Remove
+  EnvironmentProgram* __environmentProg() { return _environmentProgram; }
+
 protected:
   RenderFunction _renderFunction{};
   mat4f _viewportMatrix;
   vec3f _basePoint;
   float _basePointZ;
   float _windowViewportRatio;
+  int _environmentTextureUnit {-1};
 
   virtual void beginRender();
   virtual void endRender();
@@ -447,6 +459,7 @@ protected:
 
   std::unordered_map<uint64_t,Reference<Pipeline>> _pipelines {0x10};
   Reference<MeshPipeline> _gl; // Default pipeline. Listed in _pipelines[0].
+  Reference<EnvironmentProgram> _environmentProgram {nullptr};
 
 }; // GLRenderer
 
@@ -484,6 +497,17 @@ protected:
   GLuint _pipeline;
 };
 
+struct SamplerData
+{
+  GLint location;
+  GLint textureUnit;
+
+  void set(int textureUnit)
+  {
+    glUniform1i(location, this->textureUnit = (GLint)textureUnit);
+  }
+};
+
 class GLRenderer::FragmentShader : public GLSL::ShaderProgram
 {
 public:
@@ -495,29 +519,25 @@ public:
   const auto& shade() const { return _shade; }
   const auto& samplers() const { return _samplers; }
 
+  void set_sEnvironment(int textureUnit)
+  {
+    _samplers.sEnvironment.set(textureUnit);
+  }
+
   void set_sDiffuse(int textureUnit)
   {
-    _samplers.sDiffuse.textureUnit = textureUnit;
-    glUniform1i(_samplers.sDiffuse.location, textureUnit);
+    _samplers.sDiffuse.set(textureUnit);
   }
 
   void set_sSpecular(int textureUnit)
   {
-    _samplers.sSpecular.textureUnit = textureUnit;
-    glUniform1i(_samplers.sSpecular.location, textureUnit);
+    _samplers.sSpecular.set(textureUnit);
   }
 
   void set_sMetalRough(int textureUnit)
   {
-    _samplers.sMetalRough.textureUnit = textureUnit;
-    glUniform1i(_samplers.sMetalRough.location, textureUnit);
+    _samplers.sMetalRough.set(textureUnit);
   }
-
-  struct SamplerData
-  {
-    GLuint location;
-    GLuint textureUnit;
-  };
 
 protected:
   // `mixColor` subroutine type
@@ -546,10 +566,37 @@ protected:
 
   struct Samplers
   {
+    SamplerData sEnvironment;
     SamplerData sDiffuse;
     SamplerData sSpecular;
     SamplerData sMetalRough;
   } _samplers;
+};
+
+class GLRenderer::EnvironmentProgram : public GLSL::Program, public SharedObject
+{
+public:
+  EnvironmentProgram();
+  ~EnvironmentProgram();
+
+  // Direction order: top left, top right, bottom left, bottom right.
+  void draw(const vec3f directions[4]) const;
+
+  void setDepth(float value)
+  {
+    setUniform(_uDepthLoc, value);
+  }
+
+  void set_sEnvironment(int textureUnit)
+  {
+    _sEnvironment.set(textureUnit);
+  }
+
+private:
+  GLuint _uDepthLoc;
+  SamplerData _sEnvironment;
+  GLuint _vao;
+  GLuint _vertexBuffer;
 };
 
 class GLRenderer::MeshPipeline : public GLRenderer::Pipeline

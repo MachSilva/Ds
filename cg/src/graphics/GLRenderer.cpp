@@ -64,8 +64,8 @@ const char* PROPS_DECLARATIONS = STRINGIFY(
   struct MaterialProps
   {
     vec4 Oa; // ambient color
-    vec4 Od; // diffuse color or albedo (PBR)
-    vec4 Os; // specular spot color (Phong) or media refraction ratio (PBR)
+    vec4 Od; // diffuse color or base color (PBR)
+    vec4 Os; // specular spot color (Phong)
     float shine; // specular shininess exponent
     // PBR
     float metalness;
@@ -108,6 +108,7 @@ const char* CONFIG_BLOCK_DECLARATION = STRINGIFY(
     int projectionType; // PERSPECTIVE/PARALLEL
     //vec4 backFaceColor = vec4(1, 0, 1, 1);
     // Texture presence
+    int hasEnvironmentTexture;
     int hasDiffuseTexture;
     int hasSpecularTexture;
     int hasMetalRoughTexture; // green: roughness; blue: metalness
@@ -217,6 +218,7 @@ static const char* gFragmentShader = STRINGIFY(
   uniform sampler2D sSpecular;
   uniform sampler2D sMetalRough;
 
+  layout(early_fragment_tests) in;
   layout(location = 0) out vec4 fragmentColor;
 
   subroutine(matPropsType)
@@ -333,7 +335,7 @@ static const char* gFragmentShader = STRINGIFY(
 
     if (dot(N, V) > 0)
       //return backFaceColor;
-      N *= -1;
+      N = -N;
 
     vec3 R = reflect(V, N);
 
@@ -380,6 +382,19 @@ static const char* gFragmentShader = STRINGIFY(
     return R0 + (vec4(1) - R0) * pow(1 - dotLH, 5);
   }
 
+  vec4 BRDF(vec4 I, vec3 L, vec3 V, vec3 N, float dotNV, float dotNL,
+    MaterialProps m)
+  {
+    vec3 H = normalize(L + V);
+    vec4 specular = (
+      schlick(m.Os, dot(L, H))
+      * G(dotNL, dotNV, m.roughness)
+      * D(dot(H, N), m.roughness)
+    ) / (4 * dotNL * dotNV);
+    vec4 diffuse = m.Od / M_PI; // Lambertian diffuse
+    return I * mix(diffuse, specular, m.metalness) * dotNL;
+  }
+
   subroutine(shadingType)
   vec4 pbr(vec3 P, vec3 N)
   {
@@ -410,14 +425,7 @@ static const char* gFragmentShader = STRINGIFY(
         if (dotNL > 1e-7) // Avoid division by zero.
         {
           vec4 I = lightColor(i, d);
-          vec3 H = normalize(L + V);
-          vec4 specular = (
-            schlick(m.Os, dot(L, H))
-            * G(dotNL, dotNV, m.roughness)
-            * D(dot(H, N), m.roughness)
-          ) / (4 * dotNL * dotNV);
-          vec4 diffuse = m.Od / M_PI; // Lambertian diffuse
-          color += I * mix(diffuse, specular, m.metalness) * dotNL;
+          color += BRDF(I, L, V, N, dotNV, dotNL, m);
         }
       }
     }
@@ -454,6 +462,59 @@ static const char* gFragmentShader = STRINGIFY(
   }
 );
 
+static const char* gEnvVertex = STRINGIFY(
+  layout(location = 0) in vec3 direction;
+
+  layout(location = 0) out vec3 vDirection;
+
+  uniform float uDepth;
+
+  const vec2 k_Positions[] = vec2[](
+    vec2(-1, 1),
+    vec2( 1, 1),
+    vec2(-1,-1),
+    vec2( 1,-1)
+  );
+  void main()
+  {
+    gl_Position = vec4(k_Positions[gl_VertexID], uDepth, 1.0);
+    vDirection = normalize(direction);
+  }
+);
+
+static const char* gEnvFragment = STRINGIFY(
+  layout(early_fragment_tests) in;
+
+  layout(location = 0) in vec3 vDirection;
+
+  layout(location = 0) out vec4 fragmentColor;
+
+  uniform sampler2D sEnvironment;
+
+  float inverseMix(float lower, float upper, float v)
+  {
+    return (v - lower) / (upper - lower);
+  }
+
+  const float M_PI = 3.14159265358979323846;
+  vec3 environmentLight(vec3 V)
+  {
+    float latitude = asin(-V.y);
+    // float longitude = sign(V.x) * acos(-V.z);
+    float longitude = atan(-V.z, V.x);
+    vec2 coords = vec2(
+      inverseMix(-M_PI, M_PI, longitude),
+      inverseMix(-M_PI / 2, M_PI / 2, latitude)
+    );
+    return texture(sEnvironment, coords).xyz;
+  }
+
+  void main()
+  {
+    fragmentColor = vec4(environmentLight(normalize(vDirection)), 1);
+  }
+);
+
 GLRenderer::FragmentShader::FragmentShader(
   std::initializer_list<const char*> sources
 ) : GLSL::ShaderProgram{GL_FRAGMENT_SHADER, sources}
@@ -474,14 +535,65 @@ GLRenderer::FragmentShader::FragmentShader(
   _samplers.sMetalRough.location = glGetUniformLocation(_handle, "sMetalRough");
 
   glUseProgram(_handle);
-  set_sDiffuse(0);
-  set_sSpecular(1);
-  set_sMetalRough(2);
+  // set_sEnvironment(0);
+  set_sDiffuse(1);
+  set_sSpecular(2);
+  set_sMetalRough(3);
 }
 
 GLRenderer::FragmentShader::~FragmentShader()
 {
   // virtual destructor
+}
+
+GLRenderer::EnvironmentProgram::EnvironmentProgram()
+  : GLSL::Program("Environment Background")
+{
+  setShader(GL_VERTEX_SHADER, {
+    GLSL::VERSION,
+    gEnvVertex
+  });
+  setShader(GL_FRAGMENT_SHADER, {
+    GLSL::VERSION,
+    gEnvFragment
+  });
+
+  use();
+  _uDepthLoc = uniformLocation("uDepth");
+  _sEnvironment.location = uniformLocation("sEnvironment");
+  set_sEnvironment(0);
+
+  GLuint lastVao = 0;
+  glGetIntegerv(GL_VERTEX_ARRAY_BINDING, (GLint*) &lastVao);
+
+  glGenVertexArrays(1, &_vao);
+  glBindVertexArray(_vao);
+
+  glGenBuffers(1, &_vertexBuffer);
+  glBindBuffer(GL_ARRAY_BUFFER, _vertexBuffer);
+  glBufferStorage(GL_ARRAY_BUFFER, 4 * sizeof (vec3f),
+    nullptr, GL_DYNAMIC_STORAGE_BIT);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*) 0);
+  glEnableVertexAttribArray(0);
+
+  glBindVertexArray(lastVao);
+}
+
+void
+GLRenderer::EnvironmentProgram::draw(const vec3f directions[4]) const
+{
+  glBindVertexArray(_vao);
+  glBindBuffer(GL_ARRAY_BUFFER, _vertexBuffer);
+  glBufferSubData(GL_ARRAY_BUFFER, 0, 4 * sizeof (vec3f), directions);
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+  glBindVertexArray(0);
+}
+
+GLRenderer::EnvironmentProgram::~EnvironmentProgram()
+{
+  glDeleteBuffers(1, &_vertexBuffer);
+  glDeleteVertexArrays(1, &_vao);
 }
 
 GLRenderer::Pipeline::Pipeline()
@@ -551,6 +663,7 @@ GLRenderer::GLRenderer(SceneBase& scene, Camera& camera):
   GLRendererBase{scene, camera}
 {
   _pipelines[0] = _gl = new MeshPipeline();
+  _environmentProgram = new EnvironmentProgram();
 }
 
 GLRenderer::~GLRenderer() {}
@@ -709,6 +822,9 @@ GLRenderer::beginRender()
 
   glPolygonMode(GL_FRONT_AND_BACK,
     (renderMode != RenderMode::Wireframe) + GL_LINE);
+
+  if (_environmentTextureUnit >= 0)
+    fragmentShader()->set_sEnvironment(_environmentTextureUnit);
 }
 
 void
@@ -724,6 +840,26 @@ GLRenderer::render()
 void
 GLRenderer::endRender()
 {
+  // Render environment (if any)
+  if (_environmentTextureUnit >= 0
+    && _camera->projectionType() != Camera::Parallel)
+  {
+    // Remember: camera is facing -Z, just as OpenGL
+    auto halfHeight = std::tan(math::toRadians(_camera->viewAngle()) * 0.5f);
+    auto halfWidth = halfHeight * _camera->aspectRatio();
+    auto& N = _camera->cameraToWorldMatrix();
+    vec3f v[4]
+    {
+      N.transformVector({-halfWidth, +halfHeight, -1}).versor(),
+      N.transformVector({+halfWidth, +halfHeight, -1}).versor(),
+      N.transformVector({-halfWidth, -halfHeight, -1}).versor(),
+      N.transformVector({+halfWidth, -halfHeight, -1}).versor()
+    };
+    glUseProgram(*_environmentProgram);
+    _environmentProgram->set_sEnvironment(_environmentTextureUnit);
+    _environmentProgram->draw(v);
+  }
+
   if (_renderFunction != nullptr)
     _renderFunction(*this);
   glFlush();
@@ -745,6 +881,7 @@ GLRenderer::renderMaterial(const Material& material)
   // block->line.width = material.lineWidth;
   // block->line.color = material.lineColor;
 
+  block->hasEnvironmentTexture = _environmentTextureUnit < 0 ? 0 : 1;
   block->hasDiffuseTexture = 0;
   block->hasSpecularTexture = 0;
   block->hasMetalRoughTexture = 0;
