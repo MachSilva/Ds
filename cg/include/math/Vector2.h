@@ -27,8 +27,9 @@
 // ========
 // Class definition for 2D vector.
 //
-// Author: Paulo Pagliosa
+// Author: Paulo Pagliosa (and contributors)
 // Last revision: 18/06/2023
+// Altered version last revision: 29/02/2024
 
 #ifndef __Vector2_h
 #define __Vector2_h
@@ -77,7 +78,7 @@ public:
 
   /// Constructs a Vector2 object from v[2].
   HOST DEVICE
-  explicit Vector(const real v[])
+  constexpr explicit Vector(const real v[])
   {
     set(v);
   }
@@ -85,21 +86,21 @@ public:
   /// Constructs a Vector2 object with (v, v) or v.
   template <typename T>
   HOST DEVICE
-  explicit Vector(const T& v)
+  constexpr explicit Vector(const T& v)
   {
     set(v);
   }
 
   /// Sets this object to v.
   HOST DEVICE
-  void set(const type& v)
+  constexpr void set(const type& v)
   {
     *this = v;
   }
 
   /// Sets the coordinates of this object to (x, y).
   HOST DEVICE
-  void set(real x, real y)
+  constexpr void set(real x, real y)
   {
     this->x = x;
     this->y = y;
@@ -107,7 +108,7 @@ public:
 
   /// Sets the coordinates of this object to v[2].
   HOST DEVICE
-  void set(const real v[])
+  constexpr void set(const real v[])
   {
     x = v[0];
     y = v[1];
@@ -116,7 +117,7 @@ public:
   /// Sets the coordinates of this object to (v, v) or v.
   template <typename T>
   HOST DEVICE
-  void set(const T& v)
+  constexpr void set(const T& v)
   {
     if constexpr (std::is_arithmetic_v<T>)
       x = y = real(v);
@@ -126,7 +127,7 @@ public:
 
   template <typename T>
   HOST DEVICE
-  auto& operator =(const T& v)
+  constexpr auto& operator =(const T& v)
   {
     set(v);
     return *this;
@@ -134,7 +135,7 @@ public:
 
   /// Returns a null vector.
   HOST DEVICE
-  static type null()
+  constexpr static type null()
   {
     return type{real(0)};
   }
@@ -148,27 +149,27 @@ public:
 
   /// Returns true if this object is equal to v.
   HOST DEVICE
-  bool equals(const type& v, real eps = math::Limits<real>::eps()) const
+  constexpr bool equals(const type& v, real eps = math::Limits<real>::eps()) const
   {
     return math::isNull(x - v.x, y - v.y, eps);
   }
 
   HOST DEVICE
-  bool operator ==(const type& v) const
+  constexpr bool operator ==(const type& v) const
   {
     return equals(v);
   }
 
   /// Returns true if this object is not equal to v.
   HOST DEVICE
-  bool operator !=(const type& v) const
+  constexpr bool operator !=(const type& v) const
   {
     return !operator ==(v);
   }
 
   /// Returns a reference to this object += v.
   HOST DEVICE
-  auto& operator +=(const type& v)
+  constexpr auto& operator +=(const type& v)
   {
     x += v.x;
     y += v.y;
@@ -177,7 +178,7 @@ public:
 
   /// Returns a reference to this object -= v.
   HOST DEVICE
-  auto& operator -=(const type& v)
+  constexpr auto& operator -=(const type& v)
   {
     x -= v.x;
     y -= v.y;
@@ -186,7 +187,7 @@ public:
 
   /// Returns a reference to this object *= s.
   HOST DEVICE
-  auto& operator *=(real s)
+  constexpr auto& operator *=(real s)
   {
     x *= s;
     y *= s;
@@ -195,7 +196,7 @@ public:
 
   /// Returns a reference to this object *= v.
   HOST DEVICE
-  auto& operator *=(const type& v)
+  constexpr auto& operator *=(const type& v)
   {
     x *= v.x;
     y *= v.y;
@@ -204,105 +205,105 @@ public:
 
   /// Returns a reference to the i-th coordinate of this object.
   HOST DEVICE
-  auto& operator [](int i)
+  constexpr auto& operator [](int i)
   {
     return (&x)[i];
   }
 
   /// Returns the i-th coordinate of this object.
   HOST DEVICE
-  const auto& operator [](int i) const
+  constexpr const auto& operator [](int i) const
   {
     return (&x)[i];
   }
 
   /// Returns a pointer to the elements of this object.
   HOST DEVICE
-  explicit operator const real*() const
+  constexpr explicit operator const real*() const
   {
     return &x;
   }
 
   /// Returns this object + v.
   HOST DEVICE
-  type operator +(const type& v) const
+  constexpr type operator +(const type& v) const
   {
     return {x + v.x, y + v.y};
   }
 
   /// Returns this object - v.
   HOST DEVICE
-  type operator -(const type& v) const
+  constexpr type operator -(const type& v) const
   {
     return {x - v.x, y - v.y};
   }
 
   /// Returns a vector in the direction opposite to this object.
   HOST DEVICE
-  type operator -() const
+  constexpr type operator -() const
   {
     return {-x, -y};
   }
 
   /// Returns the scalar multiplication of this object and s.
   HOST DEVICE
-  type operator *(real s) const
+  constexpr type operator *(real s) const
   {
     return {x * s, y * s};
   }
 
   /// Returns the multiplication of this object and v.
   HOST DEVICE
-  type operator *(const type& v) const
+  constexpr type operator *(const type& v) const
   {
     return {x * v.x, y * v.y};
   }
 
   /// Returns true if this object is null.
   HOST DEVICE
-  bool isNull(real eps = math::Limits<real>::eps()) const
+  constexpr bool isNull(real eps = math::Limits<real>::eps()) const
   {
     return math::isNull(x, y, eps);
   }
 
   /// Returns the squared norm of this object.
   HOST DEVICE
-  real squaredNorm() const
+  constexpr real squaredNorm() const
   {
     return math::sqr(x) + math::sqr(y);
   }
 
   /// Returns the length of this object.
   HOST DEVICE
-  real length() const
+  constexpr real length() const
   {
     return real(sqrt(squaredNorm()));
   }
 
   /// Returns the maximum coordinate of this object.
   HOST DEVICE
-  real max() const
+  constexpr real max() const
   {
     return math::max(x, y);
   }
 
   /// Returns the minimum coordinate of this object.
   HOST DEVICE
-  real min() const
+  constexpr real min() const
   {
     return math::min(x, y);
   }
 
   /// Returns the inverse of this object.
   HOST DEVICE
-  type inverse() const
+  constexpr type inverse() const
   {
     return {1 / x, 1 / y};
   }
 
   /// Inverts and returns a reference to this object.
   HOST DEVICE
-  auto& invert()
+  constexpr auto& invert()
   {
     x = 1 / x;
     y = 1 / y;
@@ -311,7 +312,7 @@ public:
 
   /// Negates and returns a reference to this object.
   HOST DEVICE
-  auto& negate()
+  constexpr auto& negate()
   {
     x = -x;
     y = -y;
@@ -320,7 +321,7 @@ public:
 
   /// Normalizes and returns a reference to this object.
   HOST DEVICE
-  auto& normalize(real eps = math::Limits<real>::eps())
+  constexpr auto& normalize(real eps = math::Limits<real>::eps())
   {
     const auto len = length();
 
@@ -331,35 +332,35 @@ public:
 
   /// Returns the unit vector of this this object.
   HOST DEVICE
-  type versor(real eps = math::Limits<real>::eps()) const
+  constexpr type versor(real eps = math::Limits<real>::eps()) const
   {
     return type{*this}.normalize(eps);
   }
 
   /// Returns the unit vector of v.
   HOST DEVICE
-  static type versor(const type& v, real eps = math::Limits<real>::eps())
+  constexpr static type versor(const type& v, real eps = math::Limits<real>::eps())
   {
     return v.versor(eps);
   }
 
   /// Returns the dot product of this object and v.
   HOST DEVICE
-  real dot(const type& v) const
+  constexpr real dot(const type& v) const
   {
     return x * v.x + y * v.y;
   }
 
   /// Returns the dot product of this object and (x, y).
   HOST DEVICE
-  real dot(real x, real y) const
+  constexpr real dot(real x, real y) const
   {
     return dot(type{x, y});
   }
 
   /// Returns the dot product of v and w.
   HOST DEVICE
-  static real dot(const type& v, const type& w)
+  constexpr static real dot(const type& v, const type& w)
   {
     return v.dot(w);
   }
@@ -375,7 +376,7 @@ template <typename real> using Vector2 = Vector<real, 2>;
 
 /// Returns the scalar multiplication of s and v.
 template <typename real>
-HOST DEVICE inline auto
+HOST DEVICE constexpr auto
 operator *(real s, const Vector2<real>& v)
 {
   return v * s;
@@ -385,14 +386,14 @@ namespace math
 { // begin namespace math
 
 template <typename real>
-inline Vector2<real>
+constexpr Vector2<real>
 min(const Vector2<real>& a, const Vector2<real>& b)
 {
   return {math::min(a.x, b.x), math::min(a.y, b.y)};
 }
 
 template <typename real>
-inline Vector2<real>
+constexpr Vector2<real>
 max(const Vector2<real>& a, const Vector2<real>& b)
 {
   return {math::max(a.x, b.x), math::max(a.y, b.y)};

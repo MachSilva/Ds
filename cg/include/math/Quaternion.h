@@ -27,9 +27,9 @@
 // ========
 // Class definition for quaternion.
 //
-// Author: Paulo Pagliosa
-// Modified by: Felipe Machado
+// Author: Paulo Pagliosa (and contributors)
 // Last revision: 30/07/2023
+// Altered version last revision: 29/02/2024
 
 #ifndef __Quaternion_h
 #define __Quaternion_h
@@ -44,7 +44,7 @@ template <typename real, int M, int N> class Matrix;
 
 template <typename real>
 HOST DEVICE
-inline constexpr Vector3<real>
+constexpr Vector3<real>
 toRadians3(const Vector3<real>& v)
 {
   const auto x = math::toRadians(v.x);
@@ -56,7 +56,7 @@ toRadians3(const Vector3<real>& v)
 
 template <typename real>
 HOST DEVICE
-inline constexpr Vector3<real>
+constexpr Vector3<real>
 toDegrees3(const Vector3<real>& v)
 {
   const auto x = math::toDegrees(v.x);
@@ -105,42 +105,42 @@ public:
 
   /// Default constructor.
   HOST DEVICE
-  Quaternion()
+  constexpr Quaternion()
   {
     // do nothing
   }
 
   /// Constructs a Quaternion object from [(x, y, z), w].
   HOST DEVICE
-  Quaternion(real x, real y, real z, real w)
+  constexpr Quaternion(real x, real y, real z, real w)
   {
     set(x, y, z, w);
   }
 
   /// Constructs a Quaternion object from q[4].
   HOST DEVICE
-  explicit Quaternion(const real q[])
+  constexpr explicit Quaternion(const real q[])
   {
     set(q);
   }
 
   /// Constructs a Quaternion object from [v, w].
   HOST DEVICE
-  explicit Quaternion(const vec3& v, real w = 0)
+  constexpr explicit Quaternion(const vec3& v, real w = 0)
   {
     set(v, w);
   }
 
   /// Constructs a Quaternion object from angle (in degrees) and axis.
   HOST DEVICE
-  Quaternion(real angle, const vec3& axis)
+  constexpr Quaternion(real angle, const vec3& axis)
   {
     set(angle, axis);
   }
 
   /// Constructs a Quaternion object from m.
   HOST DEVICE
-  explicit Quaternion(const mat3& m)
+  constexpr explicit Quaternion(const mat3& m)
   {
     set(m);
   }
@@ -148,21 +148,21 @@ public:
   /// Constructs a Quaternion object from [(0, 0, 0), v] or v.
   template <typename T>
   HOST DEVICE
-  explicit Quaternion(const T& v)
+  constexpr explicit Quaternion(const T& v)
   {
     set(v);
   }
 
   /// Sets this object to q.
   HOST DEVICE
-  void set(const quat& q)
+  constexpr void set(const quat& q)
   {
     *this = q;
   }
 
   /// Sets the coordinates of this object to [(x, y, z), w].
   HOST DEVICE
-  void set(real x, real y, real z, real w)
+  constexpr void set(real x, real y, real z, real w)
   {
     this->x = x;
     this->y = y;
@@ -172,7 +172,7 @@ public:
 
   /// Sets the coordinates of this object to q[4].
   HOST DEVICE
-  void set(const real q[])
+  constexpr void set(const real q[])
   {
     x = q[0];
     y = q[1];
@@ -182,7 +182,7 @@ public:
 
   /// Sets the coordinates of this object to [v, w].
   HOST DEVICE
-  void set(const vec3& v, real w = 0)
+  constexpr void set(const vec3& v, real w = 0)
   {
     x = v.x;
     y = v.y;
@@ -202,12 +202,12 @@ public:
 
   /// Sets the coordinates of this object from m.
   HOST DEVICE
-  void set(const mat3& m); // implemented in Matrix3x3.h
+  constexpr void set(const mat3& m); // implemented in Matrix3x3.h
 
   /// Sets the coordinates of this object to [(0, 0, 0), v] or v.
   template <typename T>
   HOST DEVICE
-  void set(const T& v)
+  constexpr void set(const T& v)
   {
     if constexpr (std::is_arithmetic_v<T>)
       set(vec3::null(), real(v));
@@ -217,7 +217,7 @@ public:
 
   template <typename T>
   HOST DEVICE
-  auto& operator =(const T& v)
+  constexpr auto& operator =(const T& v)
   {
     set(v);
     return *this;
@@ -225,14 +225,14 @@ public:
 
   /// Returns a pointer to the elements of this object.
   HOST DEVICE
-  explicit operator const real*() const
+  constexpr explicit operator const real*() const
   {
     return &x;
   }
 
   /// Returns an identity quaternion.
   HOST DEVICE
-  static auto identity()
+  constexpr static auto identity()
   {
     return quat{real(1)};
   }
@@ -267,7 +267,7 @@ public:
 
   /// Returns a quaternion from forward and up.
   HOST DEVICE
-  static auto lookAt(const vec3& forward, const vec3& up = vec3::up())
+  constexpr static auto lookAt(const vec3& forward, const vec3& up = vec3::up())
   {
     mat3 m;
 
@@ -279,26 +279,26 @@ public:
 
   /// Returns true if this object is equals to q.
   HOST DEVICE
-  bool equals(const quat& q, real eps = math::Limits<real>::eps()) const
+  constexpr bool equals(const quat& q, real eps = math::Limits<real>::eps()) const
   {
     return math::isNull(x - q.x, y - q.y, z - q.z, w - q.w, eps);
   }
 
   HOST DEVICE
-  bool operator ==(const quat& q) const
+  constexpr bool operator ==(const quat& q) const
   {
     return equals(q);
   }
 
   HOST DEVICE
-  bool operator !=(const quat& q) const
+  constexpr bool operator !=(const quat& q) const
   {
     return !operator ==(q);
   }
 
   /// Returns a reference to this object += q.
   HOST DEVICE
-  auto& operator +=(const quat& q)
+  constexpr auto& operator +=(const quat& q)
   {
     x += q.x;
     y += q.y;
@@ -309,7 +309,7 @@ public:
 
   /// Returns a reference to this object -= q.
   HOST DEVICE
-  auto& operator -=(const quat& q)
+  constexpr auto& operator -=(const quat& q)
   {
     x -= q.x;
     y -= q.y;
@@ -320,7 +320,7 @@ public:
 
   /// Returns a reference to this object *= s.
   HOST DEVICE
-  auto& operator *=(real s)
+  constexpr auto& operator *=(real s)
   {
     x *= s;
     y *= s;
@@ -331,35 +331,35 @@ public:
 
   /// Returns a reference to this object *= q.
   HOST DEVICE
-  auto& operator *=(const quat& q)
+  constexpr auto& operator *=(const quat& q)
   {
     return *this = operator *(q);
   }
 
   /// Returns this object + q.
   HOST DEVICE
-  auto operator +(const quat& q) const
+  constexpr auto operator +(const quat& q) const
   {
     return quat{x + q.x, y + q.y, z + q.z, w + q.w};
   }
 
   /// Returns this object + q.
   HOST DEVICE
-  auto operator -(const quat& q) const
+  constexpr auto operator -(const quat& q) const
   {
     return quat{x - q.x, y - q.y, z - q.z, w - q.w};
   }
 
   /// Returns this object * s.
   HOST DEVICE
-  auto operator *(real s) const
+  constexpr auto operator *(real s) const
   {
     return quat{x * s, y * s, z * s, w * s};
   }
 
   /// Returns this object * q.
   HOST DEVICE
-  auto operator *(const quat& q) const
+  constexpr auto operator *(const quat& q) const
   {
     const auto cx = w * q.x + q.w * x + y * q.z - q.y * z;
     const auto cy = w * q.y + q.w * y + z * q.x - q.z * x;
@@ -371,49 +371,49 @@ public:
 
   /// Returns this object * v.
   HOST DEVICE
-  vec3 operator *(const vec3& v) const
+  constexpr vec3 operator *(const vec3& v) const
   {
     return rotate(v);
   }
 
   /// Returns this object * -1.
   HOST DEVICE
-  auto operator -() const
+  constexpr auto operator -() const
   {
     return quat{-x, -y, -z, -w};
   }
 
   /// Returns the conjugate of this object.
   HOST DEVICE
-  auto operator ~() const
+  constexpr auto operator ~() const
   {
     return quat{-x, -y, -z, +w};
   }
 
   /// Returns the squared norm of this object.
   HOST DEVICE
-  real squaredNorm() const
+  constexpr real squaredNorm() const
   {
     return math::sqr(x) + math::sqr(y) + math::sqr(z) + math::sqr(w);
   }
 
   /// Returns the length of this object.
   HOST DEVICE
-  real length() const
+  constexpr real length() const
   {
     return real(sqrt(squaredNorm()));
   }
 
   /// Returns true if length of this object is close to unit.
   HOST DEVICE
-  bool isUnit(real eps = math::Limits<real>::eps()) const
+  constexpr bool isUnit(real eps = math::Limits<real>::eps()) const
   {
     return math::isEqual(squaredNorm(), 1, eps);
   }
 
   /// Normalizes and returns a reference to this object.
   HOST DEVICE
-  auto& normalize(real eps = math::Limits<real>::eps())
+  constexpr auto& normalize(real eps = math::Limits<real>::eps())
   {
     const auto len = length();
 
@@ -424,7 +424,7 @@ public:
 
   /// Negates and returns a reference to this object.
   HOST DEVICE
-  auto& negate()
+  constexpr auto& negate()
   {
     x = -x;
     y = -y;
@@ -435,7 +435,7 @@ public:
 
   /// Inverts and returns a reference to this object.
   HOST DEVICE
-  auto& invert()
+  constexpr auto& invert()
   {
     x = -x;
     y = -y;
@@ -445,21 +445,21 @@ public:
 
   /// Returns the conjugate of this object.
   HOST DEVICE
-  auto conjugate() const
+  constexpr auto conjugate() const
   {
     return operator ~();
   }
 
   /// Returns the inverse of this object.
   HOST DEVICE
-  auto inverse() const
+  constexpr auto inverse() const
   {
     return conjugate().normalize();
   }
 
   /// Returns the point p rotated by this object.
   HOST DEVICE
-  vec3 rotate(const vec3& p) const
+  constexpr vec3 rotate(const vec3& p) const
   {
     const auto vx = real(2) * p.x;
     const auto vy = real(2) * p.y;
@@ -475,7 +475,7 @@ public:
 
   /// Returns the point p rotated by the inverse of this object.
   HOST DEVICE
-  vec3 inverseRotate(const vec3& p) const
+  constexpr vec3 inverseRotate(const vec3& p) const
   {
     const auto vx = real(2) * p.x;
     const auto vy = real(2) * p.y;
@@ -532,7 +532,7 @@ Quaternion<real>::eulerAngles() const
 
 /// Returns the scalar multiplication of s and q.
 template <typename real>
-HOST DEVICE inline Quaternion<real>
+HOST DEVICE constexpr Quaternion<real>
 operator *(real s, const Quaternion<real>& q)
 {
   return q * s;

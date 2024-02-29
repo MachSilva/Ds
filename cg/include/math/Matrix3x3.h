@@ -27,8 +27,9 @@
 // ========
 // Class definition for 3x3 matrix.
 //
-// Author: Paulo Pagliosa
+// Author: Paulo Pagliosa (and contributors)
 // Last revision: 30/05/2020
+// Altered version last revision: 29/02/2024
 
 #ifndef __Matrix3x3_h
 #define __Matrix3x3_h
@@ -60,63 +61,63 @@ public:
 
   /// Default constructor.
   HOST DEVICE
-  Matrix()
+  constexpr Matrix()
   {
     // do nothing
   }
 
   /// Constructs a Matrix3x3 object from [v0; v1; v2].
   HOST DEVICE
-  Matrix(const vec3& v0, const vec3& v1, const vec3& v2)
+  constexpr Matrix(const vec3& v0, const vec3& v1, const vec3& v2)
   {
     set(v0, v1, v2);
   }
 
   /// Constructs a Matrix3x3 object from v[9].
   HOST DEVICE
-  explicit Matrix(const real v[])
+  constexpr explicit Matrix(const real v[])
   {
     set(v);
   }
 
   /// Constructs a Matrix3x3 object as a multiple s of the identity matrix.
   HOST DEVICE
-  explicit Matrix(real s)
+  constexpr explicit Matrix(real s)
   {
     set(s);
   }
 
   /// Constructs a Matrix3x3 object from the diagonal d.
   HOST DEVICE
-  explicit Matrix(const vec3& d)
+  constexpr explicit Matrix(const vec3& d)
   {
     set(d);
   }
 
   /// Constructs a Matrix3x3 object from q.
   HOST DEVICE
-  explicit Matrix(const quat& q)
+  constexpr explicit Matrix(const quat& q)
   {
     set(q);
   }
 
   /// Constructs a Matrix3x3 object from m.
   HOST DEVICE
-  explicit Matrix(const mat4& m)
+  constexpr explicit Matrix(const mat4& m)
   {
     set(m);
   }
 
   /// Sets this object to m.
   HOST DEVICE
-  void set(const mat3& m)
+  constexpr void set(const mat3& m)
   {
     *this = m;
   }
 
   /// Sets the columns of this object to [v0; v1; v2].
   HOST DEVICE
-  void set(const vec3& v0, const vec3& v1, const vec3& v2)
+  constexpr void set(const vec3& v0, const vec3& v1, const vec3& v2)
   {
     this->v0 = v0;
     this->v1 = v1;
@@ -125,7 +126,7 @@ public:
 
   /// Sets the elements of this object from v[9].
   HOST DEVICE
-  void set(const real v[])
+  constexpr void set(const real v[])
   {
     v0.set(&v[0]);
     v1.set(&v[3]);
@@ -134,7 +135,7 @@ public:
 
   /// Sets this object to a multiple s of the identity matrix.
   HOST DEVICE
-  void set(real s)
+  constexpr void set(real s)
   {
     v0.set(s, 0, 0);
     v1.set(0, s, 0);
@@ -143,7 +144,7 @@ public:
 
   /// Sets this object to a diagonal matrix d.
   HOST DEVICE
-  void set(const vec3& d)
+  constexpr void set(const vec3& d)
   {
     v0.set(d.x, 0, 0);
     v1.set(0, d.y, 0);
@@ -152,7 +153,7 @@ public:
 
   /// Sets the elements of this object from q.
   HOST DEVICE
-  void set(const quat& q)
+  constexpr void set(const quat& q)
   {
     const auto qx = q.x;
     const auto qy = q.y;
@@ -178,10 +179,10 @@ public:
 
   /// Sets the elements of this object from m.
   HOST DEVICE
-  void set(const mat4& m); // implemented in Matrix4x4.h
+  constexpr void set(const mat4& m); // implemented in Matrix4x4.h
 
   HOST DEVICE
-  mat3& operator =(const mat4& m)
+  constexpr mat3& operator =(const mat4& m)
   {
     set(m);
     return *this;
@@ -189,77 +190,77 @@ public:
 
   /// Returns a zero matrix.
   HOST DEVICE
-  static mat3 zero()
+  constexpr static mat3 zero()
   {
     return mat3{real(0)};
   }
 
   /// Returns an identity matrix.
   HOST DEVICE
-  static mat3 identity()
+  constexpr static mat3 identity()
   {
     return mat3{(real)1};
   }
 
   /// Returns a diagonal matrix d.
   HOST DEVICE
-  static mat3 diagonal(const vec3& d)
+  constexpr static mat3 diagonal(const vec3& d)
   {
     return mat3{d};
   }
 
   /// Returns the diagonal of this object.
   HOST DEVICE
-  vec3 diagonal() const
+  constexpr vec3 diagonal() const
   {
     return vec3{v0.x, v1.y, v2.z};
   }
 
   /// Returns the trace of this object.
   HOST DEVICE
-  real trace() const
+  constexpr real trace() const
   {
     return v0.x + v1.y + v2.z;
   }
 
   /// Returns a reference to the j-th column of this object.
   HOST DEVICE
-  vec3& operator [](int j)
+  constexpr vec3& operator [](int j)
   {
     return (&v0)[j];
   }
 
   /// Returns the j-th column of this object.
   HOST DEVICE
-  const vec3& operator [](int j) const
+  constexpr const vec3& operator [](int j) const
   {
     return (&v0)[j];
   }
 
   /// Returns a reference to the element (i, j) of this object.
   HOST DEVICE
-  real& operator ()(int i, int j)
+  constexpr real& operator ()(int i, int j)
   {
     return (*this)[j][i];
   }
 
   /// Returns the element (i, j) of this object.
   HOST DEVICE
-  const real& operator ()(int i, int j) const
+  constexpr const real& operator ()(int i, int j) const
   {
     return (*this)[j][i];
   }
 
   /// Returns this object * s.
   HOST DEVICE
-  mat3 operator *(real s) const
+  constexpr mat3 operator *(real s) const
   {
     return mat3{v0 * s, v1 * s, v2 * s};
   }
 
   /// Returns a reference to this object *= s.
   HOST DEVICE
-  mat3& operator *=(real s)
+  constexpr mat3& operator *=(real s)
   {
     v0 *= s;
     v1 *= s;
@@ -269,7 +270,7 @@ public:
 
   /// Returns this object * m.
   HOST DEVICE
-  mat3 operator *(const mat3& m) const
+  constexpr mat3 operator *(const mat3& m) const
   {
     const auto b0 = transform(m.v0);
     const auto b1 = transform(m.v1);
@@ -280,21 +281,21 @@ public:
 
   /// Returns a reference to this object *= m.
   HOST DEVICE
-  mat3& operator *=(const mat3& m)
+  constexpr mat3& operator *=(const mat3& m)
   {
     return *this = operator *(m);
   }
 
   /// Returns this object * v.
   HOST DEVICE
-  vec3 operator *(const vec3& v) const
+  constexpr vec3 operator *(const vec3& v) const
   {
     return transform(v);
   }
 
   /// Returns the transposed of this object.
   HOST DEVICE
-  mat3 transposed() const
+  constexpr mat3 transposed() const
   {
     const vec3 b0{v0.x, v1.x, v2.x};
     const vec3 b1{v0.y, v1.y, v2.y};
@@ -305,7 +306,7 @@ public:
 
   /// Transposes and returns a reference to this object.
   HOST DEVICE
-  mat3& transpose()
+  constexpr mat3& transpose()
   {
     return *this = transposed();
   }
@@ -313,7 +314,7 @@ public:
   /// \brief Tries to invert this object and returns true on success;
   /// otherwise, leaves this object unchanged and returns false.
   HOST DEVICE
-  bool invert(real eps = math::Limits<real>::eps())
+  constexpr bool invert(real eps = math::Limits<real>::eps())
   {
     const auto b00 = v1[1] * v2[2] - v1[2] * v2[1];
     const auto b01 = v0[2] * v2[1] - v0[1] * v2[2];
@@ -337,21 +338,21 @@ public:
 
   /// Assigns this object to m and tries to invert m.
   HOST DEVICE
-  bool inverse(mat3& m, real eps = math::Limits<real>::eps()) const
+  constexpr bool inverse(mat3& m, real eps = math::Limits<real>::eps()) const
   {
     return (m = *this).invert(eps);
   }
 
   /// Returns v transformed by this object.
   HOST DEVICE
-  vec3 transform(const vec3& v) const
+  constexpr vec3 transform(const vec3& v) const
   {
     return v0 * v.x + v1 * v.y + v2 * v.z;
   }
 
   /// Returns v transformed by the transposed of this object.
   HOST DEVICE
-  vec3 transposeTransform(const vec3& v) const
+  constexpr vec3 transposeTransform(const vec3& v) const
   {
     return vec3{v0.dot(v), v1.dot(v), v2.dot(v)};
   }
@@ -360,7 +361,7 @@ public:
   /// This method is slower than transform3x4, but can handle
   /// projective transformations as well.
   HOST DEVICE
-  vec2 transform(const vec2& p) const
+  constexpr vec2 transform(const vec2& p) const
   {
     const auto r = transform(vec3{p, 1});
     return math::isZero(r.z) ? vec2(r) : vec2(r) * ((real)1 / r.z);
@@ -370,7 +371,7 @@ public:
   /// This method is faster than transform, but it can solely
   /// handle affine 2D transformations.
   HOST DEVICE
-  vec2 transform2x3(const vec2& p) const
+  constexpr vec2 transform2x3(const vec2& p) const
   {
     const auto x = v0.x * p.x + v1.x * p.y + v2.x;
     const auto y = v0.y * p.x + v1.y * p.y + v2.y;
@@ -380,14 +381,14 @@ public:
 
   /// Returns a vector v transformed by this object.
   HOST DEVICE
-  vec3 transformVector(const vec2& v) const
+  constexpr vec3 transformVector(const vec2& v) const
   {
     return vec2(v0) * v.x + vec2(v1) * v.y;
   }
 
   /// Returns a pointer to the elements of this object.
   HOST DEVICE
-  explicit operator const real*() const
+  constexpr explicit operator const real*() const
   {
     return &v0.x;
   }
@@ -409,7 +410,7 @@ private:
 
 /// Sets the coordinates of this object from m.
 template <typename real>
-HOST DEVICE void
+HOST DEVICE constexpr void
 Quaternion<real>::set(const mat3& m) // declared in Quaternion.h
 {
   auto t = m.trace();
@@ -468,7 +469,7 @@ template <typename real> using Matrix3x3 = Matrix<real, 3, 3>;
 
 /// Returns s * m.
 template <typename real>
-HOST DEVICE inline Matrix3x3<real>
+HOST DEVICE constexpr Matrix3x3<real>
 operator *(real s, const Matrix3x3<real>& m)
 {
   return m * s;

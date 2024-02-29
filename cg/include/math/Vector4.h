@@ -27,8 +27,9 @@
 // ========
 // Class definition for 4D vector.
 //
-// Author: Paulo Pagliosa
+// Author: Paulo Pagliosa (and contributors)
 // Last revision: 02/06/2020
+// Altered version last revision: 29/02/2024
 
 #ifndef __Vector4_h
 #define __Vector4_h
@@ -60,28 +61,28 @@ public:
 
   /// Default constructor.
   HOST DEVICE
-  Vector()
+  constexpr Vector()
   {
     // do nothing
   }
 
   /// Constructs a Vector4 object from (x, y, z, w).
   HOST DEVICE
-  Vector(real x, real y, real z, real w = 0)
+  constexpr Vector(real x, real y, real z, real w = 0)
   {
     set(x, y, z, w);
   }
 
   /// Constructs a Vector4 object from v[4].
   HOST DEVICE
-  explicit Vector(const real v[])
+  constexpr explicit Vector(const real v[])
   {
     set(v);
   }
 
   /// Constructs a Vector4 object from (v, w).
   HOST DEVICE
-  explicit Vector(const vec3& v, real w = 0)
+  constexpr explicit Vector(const vec3& v, real w = 0)
   {
     set(v, w);
   }
@@ -89,21 +90,21 @@ public:
   /// Constructs a Vector4 object with (v, v, v, v) or v.
   template <typename T>
   HOST DEVICE
-  explicit Vector(const T& v)
+  constexpr explicit Vector(const T& v)
   {
     set(v);
   }
 
   /// Sets this object to v.
   HOST DEVICE
-  void set(const vec4& v)
+  constexpr void set(const vec4& v)
   {
     *this = v;
   }
 
   /// Sets the coordinates of this object to (x, y, z, w).
   HOST DEVICE
-  void set(real x, real y, real z, real w = 0)
+  constexpr void set(real x, real y, real z, real w = 0)
   {
     this->x = x;
     this->y = y;
@@ -113,7 +114,7 @@ public:
 
   /// Sets the coordinates of this object to v[4].
   HOST DEVICE
-  void set(const real v[])
+  constexpr void set(const real v[])
   {
     x = v[0];
     y = v[1];
@@ -123,14 +124,14 @@ public:
 
   /// Sets the coordinates of this object to (s, s, s, s).
   HOST DEVICE
-  void set(real s)
+  constexpr void set(real s)
   {
     x = y = z = w = s;
   }
 
   /// Sets the coordinates of this object to (v, w).
   HOST DEVICE
-  void set(const vec3& v, real w = 0)
+  constexpr void set(const vec3& v, real w = 0)
   {
     x = v.x;
     y = v.y;
@@ -141,7 +142,7 @@ public:
   /// Sets the coordinates of this object to (v, v, v, v) or v.
   template <typename T>
   HOST DEVICE
-  void set(const T& v)
+  constexpr void set(const T& v)
   {
     if constexpr (std::is_arithmetic_v<T>)
       x = y = z = w = real(v);
@@ -151,7 +152,7 @@ public:
 
   template <typename T>
   HOST DEVICE
-  vec4& operator =(const T& v)
+  constexpr vec4& operator =(const T& v)
   {
     set(v);
     return *this;
@@ -159,7 +160,7 @@ public:
 
   /// Returns a null vector.
   HOST DEVICE
-  static vec4 null()
+  constexpr static vec4 null()
   {
     return vec4(real(0));
   }
@@ -173,27 +174,27 @@ public:
 
   /// Returns true if this object is equal to v.
   HOST DEVICE
-  bool equals(const vec4& v, real eps = math::Limits<real>::eps()) const
+  constexpr bool equals(const vec4& v, real eps = math::Limits<real>::eps()) const
   {
     return math::isNull(x - v.x, y - v.y, z - v.z, w - v.w, eps);
   }
 
   HOST DEVICE
-  bool operator ==(const vec4& v) const
+  constexpr bool operator ==(const vec4& v) const
   {
     return equals(v);
   }
 
   /// Returns true if this object is not equal to v.
   HOST DEVICE
-  bool operator !=(const vec4& v) const
+  constexpr bool operator !=(const vec4& v) const
   {
     return !operator ==(v);
   }
 
   /// Returns a reference to this object += v.
   HOST DEVICE
-  vec4& operator +=(const vec4& v)
+  constexpr vec4& operator +=(const vec4& v)
   {
     x += v.x;
     y += v.y;
@@ -204,7 +205,7 @@ public:
 
   /// Returns a reference to this object -= v.
   HOST DEVICE
-  vec4& operator -=(const vec4& v)
+  constexpr vec4& operator -=(const vec4& v)
   {
     x -= v.x;
     y -= v.y;
@@ -215,7 +216,7 @@ public:
 
   /// Returns a reference to this object *= s.
   HOST DEVICE
-  vec4& operator *=(real s)
+  constexpr vec4& operator *=(real s)
   {
     x *= s;
     y *= s;
@@ -226,7 +227,7 @@ public:
 
   /// Returns a reference to this object *= v.
   HOST DEVICE
-  vec4& operator *=(const vec4& v)
+  constexpr vec4& operator *=(const vec4& v)
   {
     x *= v.x;
     y *= v.y;
@@ -237,105 +238,105 @@ public:
 
   /// Returns a reference to the i-th coordinate of this object.
   HOST DEVICE
-  real& operator [](int i)
+  constexpr real& operator [](int i)
   {
     return (&x)[i];
   }
 
   /// Returns the i-th coordinate of this object.
   HOST DEVICE
-  const real& operator [](int i) const
+  constexpr const real& operator [](int i) const
   {
     return (&x)[i];
   }
 
   /// Returns a pointer to the elements of this object.
   HOST DEVICE
-  explicit operator const real*() const
+  constexpr explicit operator const real*() const
   {
     return &x;
   }
 
   /// Returns this object + v.
   HOST DEVICE
-  vec4 operator +(const vec4& v) const
+  constexpr vec4 operator +(const vec4& v) const
   {
     return vec4{x + v.x, y + v.y, z + v.z, w + v.w};
   }
 
   /// Returns this object - v.
   HOST DEVICE
-  vec4 operator -(const vec4& v) const
+  constexpr vec4 operator -(const vec4& v) const
   {
     return vec4{x - v.x, y - v.y, z - v.z, w - v.w};
   }
 
   /// Returns a vector in the direction opposite to this object.
   HOST DEVICE
-  vec4 operator -() const
+  constexpr vec4 operator -() const
   {
     return vec4{-x, -y, -z, -w};
   }
 
   /// Returns the scalar multiplication of this object and s.
   HOST DEVICE
-  vec4 operator *(real s) const
+  constexpr vec4 operator *(real s) const
   {
     return vec4{x * s, y * s, z * s, w * s};
   }
 
   /// Returns the multiplication of this object and v.
   HOST DEVICE
-  vec4 operator *(const vec4& v) const
+  constexpr vec4 operator *(const vec4& v) const
   {
     return vec4{x * v.x, y * v.y, z * v.z, w * v.w};
   }
 
   /// Returns true if this object is null.
   HOST DEVICE
-  bool isNull(real eps = math::Limits<real>::eps()) const
+  constexpr bool isNull(real eps = math::Limits<real>::eps()) const
   {
     return math::isNull(x, y, z, w, eps);
   }
 
   /// Returns the squared norm of this object.
   HOST DEVICE
-  real squaredNorm() const
+  constexpr real squaredNorm() const
   {
     return math::sqr(x) + math::sqr(y) + math::sqr(z) + math::sqr(w);
   }
 
   /// Returns the length of this object.
   HOST DEVICE
-  real length() const
+  constexpr real length() const
   {
     return sqrt(squaredNorm());
   }
 
   /// Returns the maximum coordinate of this object.
   HOST DEVICE
-  real max() const
+  constexpr real max() const
   {
     return math::max(x, math::max(y, math::max(z, w)));
   }
 
   /// Returns the minimum coordinate of this object.
   HOST DEVICE
-  real min() const
+  constexpr real min() const
   {
     return math::min(x, math::min(y, math::min(z, w)));
   }
 
   /// Returns the inverse of this object.
   HOST DEVICE
-  vec4 inverse() const
+  constexpr vec4 inverse() const
   {
     return vec4{1 / x, 1 / y, 1 / z, 1 / w};
   }
 
   /// Inverts and returns a reference to this object.
   HOST DEVICE
-  vec3& invert()
+  constexpr vec3& invert()
   {
     x = 1 / x;
     y = 1 / y;
@@ -346,7 +347,7 @@ public:
 
   /// Negates and returns a reference to this object.
   HOST DEVICE
-  vec4& negate()
+  constexpr vec4& negate()
   {
     x = -x;
     y = -y;
@@ -357,7 +358,7 @@ public:
 
   /// Normalizes and returns a reference to this object.
   HOST DEVICE
-  vec4& normalize(real eps = math::Limits<real>::eps())
+  constexpr vec4& normalize(real eps = math::Limits<real>::eps())
   {
     const auto len = length();
 
@@ -368,35 +369,35 @@ public:
 
   /// Returns the unit vector of this this object.
   HOST DEVICE
-  vec4 versor(real eps = math::Limits<real>::eps()) const
+  constexpr vec4 versor(real eps = math::Limits<real>::eps()) const
   {
     return vec4{*this}.normalize(eps);
   }
 
   /// Returns the unit vector of v.
   HOST DEVICE
-  static vec4 versor(const vec4& v, real eps = math::Limits<real>::eps())
+  constexpr static vec4 versor(const vec4& v, real eps = math::Limits<real>::eps())
   {
     return v.versor(eps);
   }
 
   /// Returns the dot product of this object and v.
   HOST DEVICE
-  real dot(const vec4& v) const
+  constexpr real dot(const vec4& v) const
   {
     return x * v.x + y * v.y + z * v.z + w * v.w;
   }
 
   /// Returns the dot product of this object and (x, y, z, w).
   HOST DEVICE
-  real dot(real x, real y, real z, real w) const
+  constexpr real dot(real x, real y, real z, real w) const
   {
     return dot(vec4(x, y, z, w));
   }
 
   /// Returns the dot product of v and w.
   HOST DEVICE
-  static real dot(const vec4& v, const vec4& w)
+  constexpr static real dot(const vec4& v, const vec4& w)
   {
     return v.dot(w);
   }
@@ -412,7 +413,7 @@ template <typename real> using Vector4 = Vector<real, 4>;
 
 /// Returns the scalar multiplication of s and v.
 template <typename real>
-HOST DEVICE inline Vector4<real>
+HOST DEVICE constexpr Vector4<real>
 operator *(real s, const Vector4<real>& v)
 {
   return v * s;

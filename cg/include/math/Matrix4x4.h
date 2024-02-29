@@ -27,8 +27,9 @@
 // ========
 // Class definition for 4x4 matrix.
 //
-// Author: Paulo Pagliosa
+// Author: Paulo Pagliosa (and contributors)
 // Last revision: 30/05/2020
+// Altered version last revision: 29/02/2024
 
 #ifndef __Matrix4x4_h
 #define __Matrix4x4_h
@@ -64,63 +65,63 @@ public:
 
   /// Default constructor.
   HOST DEVICE
-  Matrix()
+  constexpr Matrix()
   {
     // do nothing
   }
 
   /// Constructs a Matrix4x4 object from [v0; v1; v2; v3].
   HOST DEVICE
-  Matrix(const vec4& v0, const vec4& v1, const vec4& v2, const vec4& v3)
+  constexpr Matrix(const vec4& v0, const vec4& v1, const vec4& v2, const vec4& v3)
   {
     set(v0, v1, v2, v3);
   }
 
   /// Constructs a Matrix4x4 object from v[16].
   HOST DEVICE
-  explicit Matrix(const real v[])
+  constexpr explicit Matrix(const real v[])
   {
     set(v);
   }
 
   /// Constructs a Matrix4x4 object as a multiple s of the identity matrix.
   HOST DEVICE
-  explicit Matrix(real s)
+  constexpr explicit Matrix(real s)
   {
     set(s);
   }
 
   /// Constructs a Matrix4x4 object from the diagonal d.
   HOST DEVICE
-  explicit Matrix(const vec4& d)
+  constexpr explicit Matrix(const vec4& d)
   {
     set(d);
   }
 
   /// Constructs a Matrix4x4 object from q and p.
   HOST DEVICE
-  explicit Matrix(const quat& q, const vec3& p = vec3::null())
+  constexpr explicit Matrix(const quat& q, const vec3& p = vec3::null())
   {
     set(q, p);
   }
 
   /// Constructs a Matrix4x4 object from r and p.
   HOST DEVICE
-  explicit Matrix(const mat3& r, const vec3& p = vec3::null())
+  constexpr explicit Matrix(const mat3& r, const vec3& p = vec3::null())
   {
     set(r, p);
   }
 
   /// Sets this object to m.
   HOST DEVICE
-  void set(const mat4& m)
+  constexpr void set(const mat4& m)
   {
     *this = m;
   }
 
   /// Sets the columns of this object to [v0; v1; v2; v3].
   HOST DEVICE
-  void set(const vec4& v0, const vec4& v1, const vec4& v2, const vec4& v3)
+  constexpr void set(const vec4& v0, const vec4& v1, const vec4& v2, const vec4& v3)
   {
     this->v0 = v0;
     this->v1 = v1;
@@ -130,7 +131,7 @@ public:
 
   /// Sets the elements of this object from v[16].
   HOST DEVICE
-  void set(const real v[])
+  constexpr void set(const real v[])
   {
     v0.set(&v[0x0]);
     v1.set(&v[0x4]);
@@ -140,7 +141,7 @@ public:
 
   /// Sets this object to a multiply s of the identity matrix.
   HOST DEVICE
-  void set(real s)
+  constexpr void set(real s)
   {
     v0.set(s, 0, 0, 0);
     v1.set(0, s, 0, 0);
@@ -150,7 +151,7 @@ public:
 
   /// Sets this object to a diagonal matrix d.
   HOST DEVICE
-  void set(const vec4& d)
+  constexpr void set(const vec4& d)
   {
     v0.set(d.x, 0, 0, 0);
     v1.set(0, d.y, 0, 0);
@@ -160,14 +161,14 @@ public:
 
   /// Sets the elements of this object from q and p.
   HOST DEVICE
-  void set(const quat& q, const vec3& p = vec3::null())
+  constexpr void set(const quat& q, const vec3& p = vec3::null())
   {
     set(mat3{q}, p);
   }
 
   /// Sets the elements of this object from r and p.
   HOST DEVICE
-  void set(const mat3& r, const vec3& p = vec3::null())
+  constexpr void set(const mat3& r, const vec3& p = vec3::null())
   {
     v0 = r[0];
     v1 = r[1];
@@ -176,7 +177,7 @@ public:
   }
 
   HOST DEVICE
-  mat4& operator =(const mat3& m)
+  constexpr mat4& operator =(const mat3& m)
   {
     set(m);
     return *this;
@@ -184,70 +185,70 @@ public:
 
   /// Returns a zero matrix.
   HOST DEVICE
-  static mat4 zero()
+  constexpr static mat4 zero()
   {
     return mat4{(real)0};
   }
 
   /// Returns an identity matrix.
   HOST DEVICE
-  static mat4 identity()
+  constexpr static mat4 identity()
   {
     return mat4{(real)1};
   }
 
   /// Returns a diagonal matrix d.
   HOST DEVICE
-  static mat4 diagonal(const vec4& d)
+  constexpr static mat4 diagonal(const vec4& d)
   {
     return mat4{d};
   }
 
   /// Returns the diagonal of this object.
   HOST DEVICE
-  vec4 diagonal() const
+  constexpr vec4 diagonal() const
   {
     return vec4{v0.x, v1.y, v2.z, v3.w};
   }
 
   /// Returns a reference to the j-th column of this object.
   HOST DEVICE
-  vec4& operator [](int j)
+  constexpr vec4& operator [](int j)
   {
     return (&v0)[j];
   }
 
   /// Returns the j-th column of this object.
   HOST DEVICE
-  const vec4& operator [](int j) const
+  constexpr const vec4& operator [](int j) const
   {
     return (&v0)[j];
   }
 
   /// Returns a reference to the element (i, j) of this object.
   HOST DEVICE
-  real& operator ()(int i, int j)
+  constexpr real& operator ()(int i, int j)
   {
     return (*this)[j][i];
   }
 
   /// Returns the element (i, j) of this object.
   HOST DEVICE
-  const real& operator ()(int i, int j) const
+  constexpr const real& operator ()(int i, int j) const
   {
     return (*this)[j][i];
   }
 
   /// Returns this object * s.
   HOST DEVICE
-  mat4 operator *(real s) const
+  constexpr mat4 operator *(real s) const
   {
     return mat4{v0 * s, v1 * s, v2 * s, v3 * s};
   }
 
   /// Returns a reference to this object *= s.
   HOST DEVICE
-  mat4& operator *=(real s)
+  constexpr mat4& operator *=(real s)
   {
     v0 *= s;
     v1 *= s;
@@ -258,7 +259,7 @@ public:
 
   /// Returns this object * m.
   HOST DEVICE
-  mat4 operator *(const mat4& m) const
+  constexpr mat4 operator *(const mat4& m) const
   {
     const auto b0 = transform(m.v0);
     const auto b1 = transform(m.v1);
@@ -270,21 +271,21 @@ public:
 
   /// Returns a reference to this object *= m.
   HOST DEVICE
-  mat4& operator *=(const mat4& m)
+  constexpr mat4& operator *=(const mat4& m)
   {
     return *this = operator *(m);
   }
 
   /// Returns this object * v.
   HOST DEVICE
-  vec4 operator *(const vec4& v) const
+  constexpr vec4 operator *(const vec4& v) const
   {
     return transform(v);
   }
 
   /// Returns the transposed of this object.
   HOST DEVICE
-  mat4 transposed() const
+  constexpr mat4 transposed() const
   {
     const vec4 b0{v0.x, v1.x, v2.x, v3.x};
     const vec4 b1{v0.y, v1.y, v2.y, v3.y};
@@ -296,7 +297,7 @@ public:
 
   /// Transposes and returns a reference to this object.
   HOST DEVICE
-  mat4& transpose()
+  constexpr mat4& transpose()
   {
     return *this = transposed();
   }
@@ -304,7 +305,7 @@ public:
   /// \brief Tries to invert this object and returns true on success;
   /// otherwise, leaves this object unchanged and returns false.
   HOST DEVICE
-  bool invert(real eps = math::Limits<real>::eps())
+  constexpr bool invert(real eps = math::Limits<real>::eps())
   {
     const auto a00 = v0[0], a01 = v0[1], a02 = v0[2], a03 = v0[3];
     const auto a10 = v1[0], a11 = v1[1], a12 = v1[2], a13 = v1[3];
@@ -342,14 +343,14 @@ public:
 
   /// Assigns this object to m and tries to invert m.
   HOST DEVICE
-  bool inverse(mat4& m, real eps = math::Limits<real>::eps()) const
+  constexpr bool inverse(mat4& m, real eps = math::Limits<real>::eps()) const
   {
     return (m = *this).invert(eps);
   }
 
   /// Returns a position p transformed by this object.
   HOST DEVICE
-  vec4 transform(const vec4& p) const
+  constexpr vec4 transform(const vec4& p) const
   {
     return v0 * p.x + v1 * p.y + v2 * p.z + v3 * p.w;
   }
@@ -358,7 +359,7 @@ public:
   /// This method is slower than transform3x4, but can handle
   /// projective transformations as well.
   HOST DEVICE
-  vec3 transform(const vec3& p) const
+  constexpr vec3 transform(const vec3& p) const
   {
     const auto r = transform(vec4{p, 1});
     return math::isZero(r.w) ? vec3(r) : vec3(r) * ((real)1 / r.w);
@@ -368,7 +369,7 @@ public:
   /// This method is faster than transform, but it can solely
   /// handle affine 3D transformations.
   HOST DEVICE
-  vec3 transform3x4(const vec3& p) const
+  constexpr vec3 transform3x4(const vec3& p) const
   {
     const auto x = v0.x * p.x + v1.x * p.y + v2.x * p.z + v3.x;
     const auto y = v0.y * p.x + v1.y * p.y + v2.y * p.z + v3.y;
@@ -379,14 +380,14 @@ public:
 
   /// Returns a vector v transformed by this object.
   HOST DEVICE
-  vec3 transformVector(const vec3& v) const
+  constexpr vec3 transformVector(const vec3& v) const
   {
     return vec3(v0) * v.x + vec3(v1) * v.y + vec3(v2) * v.z;
   }
 
   /// Returns a translation, rotation, and scaling matrix.
   HOST DEVICE
-  static mat4 TRS(const vec3& p, const quat& q, const vec3& s)
+  constexpr static mat4 TRS(const vec3& p, const quat& q, const vec3& s)
   {
     mat4 m{q, p};
 
@@ -397,53 +398,53 @@ public:
   }
 
   HOST DEVICE
-  static mat4 TRS(const vec3& p, const vec3& angles, const vec3& s)
+  constexpr static mat4 TRS(const vec3& p, const vec3& angles, const vec3& s)
   {
     return TRS(p, quat::eulerAngles(angles), s);
   }
 
   /// Sets this object as a TRS matrix.
   HOST DEVICE
-  void setTRS(const vec3& p, const quat& q, const vec3& s)
+  constexpr void setTRS(const vec3& p, const quat& q, const vec3& s)
   {
     *this = TRS(p, q, s);
   }
 
   HOST DEVICE
-  void setTRS(const vec3& p, const vec3& angles, const vec3& s)
+  constexpr void setTRS(const vec3& p, const vec3& angles, const vec3& s)
   {
     setTRS(p, quat::eulerAngles(angles), s);
   }
 
   /// Returns a rotation matrix.
   HOST DEVICE
-  static mat4 rotation(const quat& q, const vec3& p)
+  constexpr static mat4 rotation(const quat& q, const vec3& p)
   {
     mat3 r{q};
     return mat4{r, p - r * p};
   }
 
   HOST DEVICE
-  static mat4 rotation(const vec3& axis, real angle, const vec3& p)
+  constexpr static mat4 rotation(const vec3& axis, real angle, const vec3& p)
   {
     return rotation(quat{angle, axis}, p);
   }
 
   HOST DEVICE
-  void setRotation(const quat& q, const vec3& p)
+  constexpr void setRotation(const quat& q, const vec3& p)
   {
     *this = rotation(q, p);
   }
 
   HOST DEVICE
-  void setRotation(const vec3& axis, real angle, const vec3& p)
+  constexpr void setRotation(const vec3& axis, real angle, const vec3& p)
   {
     setRotation(quat{angle, axis}, p);
   }
 
   /// Returns an orthographic parallel projection matrix.
   HOST DEVICE
-  static mat4 ortho(real left,
+  constexpr static mat4 ortho(real left,
     real right,
     real bottom,
     real top,
@@ -463,7 +464,7 @@ public:
 
   /// Returns a perspective projection matrix.
   HOST DEVICE
-  static mat4 frustum(real left,
+  constexpr static mat4 frustum(real left,
     real right,
     real bottom,
     real top,
@@ -487,7 +488,7 @@ public:
   /// is the aspect ratio (width divided by height); zFar and zFar
   /// set up the depth clipping planes (always positive).
   HOST DEVICE
-  static mat4 perspective(real fovy, real aspect, real zNear, real zFar)
+  constexpr static mat4 perspective(real fovy, real aspect, real zNear, real zFar)
   {
     const auto t = tan(math::toRadians(fovy) * real(0.5));
     mat4 m{(real)0};
@@ -504,7 +505,7 @@ public:
   /// eye is the position of the camera; center is the focal point;
   /// up is the view up vector.
   HOST DEVICE
-  static mat4 lookAt(const vec3& eye, const vec3& center, const vec3& up)
+  constexpr static mat4 lookAt(const vec3& eye, const vec3& center, const vec3& up)
   {
     const auto n = (eye - center).versor();
     const auto u = up.cross(n).versor();
@@ -528,7 +529,7 @@ public:
 
   /// Returns a pointer to the elements of this object.
   HOST DEVICE
-  explicit operator const real*() const
+  constexpr explicit operator const real*() const
   {
     return &v0.x;
   }
@@ -554,7 +555,7 @@ template <typename real> using Matrix4x4 = Matrix<real, 4, 4>;
 
 /// Returns s * m.
 template <typename real>
-HOST DEVICE inline Matrix4x4<real>
+HOST DEVICE constexpr Matrix4x4<real>
 operator *(real s, const Matrix4x4<real>& m)
 {
   return m * s;
@@ -562,7 +563,7 @@ operator *(real s, const Matrix4x4<real>& m)
 
 /// Sets the elements of this object from m.
 template <typename real>
-HOST DEVICE inline void
+HOST DEVICE constexpr void
 Matrix<real, 3, 3>::set(const mat4& m) // declared in Matrix3x3.h
 {
   v0 = m[0];
