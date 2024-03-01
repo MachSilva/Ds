@@ -27,8 +27,9 @@
 // ========
 // Source file for scene reader.
 //
-// Author: Paulo Pagliosa
+// Author: Paulo Pagliosa (and contributors)
 // Last revision: 11/07/2023
+// Altered version last revision: 01/03/2024
 
 #include "SceneReader.h"
 
@@ -139,15 +140,19 @@ SceneReader::Parser::start() try
 {
   preamble();
   if (_token == _SCENE)
+  {
     if (_scene != nullptr)
       error(MULTIPLE_SCENE_DEFINITION);
     else
       parseScene();
+  }
   if (_token != _EOF)
+  {
     if (_token < 256)
       error(UNEXPECTED_CHAR, _token);
     else
       error(SYNTAX);
+  }
 }
 catch (const std::exception&)
 {

@@ -27,13 +27,15 @@
 // ========
 // Classes and functions for CUDA utilities.
 //
-// Author: Paulo Pagliosa
+// Author: Paulo Pagliosa (and contributors)
 // Last revision: 26/04/2021
+// Altered version last revision: 01/03/2024
 
 #ifndef __CUDAHelper_h
 #define __CUDAHelper_h
 
 #include "core/Globals.h"
+#include <cinttypes>
 #include <iostream>
 
 namespace cg

@@ -27,8 +27,9 @@
 // ========
 // Class definition for BVH.
 //
-// Author: Paulo Pagliosa
+// Author: Paulo Pagliosa (and contributors)
 // Last revision: 10/02/2022
+// Altered version last revision: 01/03/2024
 
 #ifndef __BVH_h
 #define __BVH_h
@@ -76,7 +77,22 @@ public:
   void iterate(BVHNodeFunction) const;
 
 protected:
-  struct PrimitiveInfo;
+  struct PrimitiveInfo
+  {
+    uint32_t index;
+    Bounds3f bounds;
+    vec3f centroid;
+
+    PrimitiveInfo() = default;
+
+    PrimitiveInfo(uint32_t index, const Bounds3f& bounds):
+      index{index},
+      bounds{bounds},
+      centroid{bounds.center()}
+    {
+      // do nothing
+    }
+  }; // BVHBase::PrimitiveInfo
 
   using PrimitiveInfoArray = std::vector<PrimitiveInfo>;
   using IndexArray = std::vector<uint32_t>;
@@ -116,25 +132,6 @@ private:
   Node* makeLeaf(PrimitiveInfoArray&, uint32_t, uint32_t, IndexArray&);
 
 }; // BVHBase
-
-struct BVHBase::PrimitiveInfo
-{
-  uint32_t index;
-  Bounds3f bounds;
-  vec3f centroid;
-
-  PrimitiveInfo() = default;
-
-  PrimitiveInfo(uint32_t index, const Bounds3f& bounds):
-    index{index},
-    bounds{bounds},
-    centroid{bounds.center()}
-  {
-    // do nothing
-  }
-
-}; // BVHBase::PrimitiveInfo
-
 
 /////////////////////////////////////////////////////////////////////
 //

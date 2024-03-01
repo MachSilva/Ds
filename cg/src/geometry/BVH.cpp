@@ -27,8 +27,9 @@
 // ========
 // Source file for BVH.
 //
-// Author: Paulo Pagliosa
+// Author: Paulo Pagliosa (and contributors)
 // Last revision: 22/06/2023
+// Altered version last revision: 01/03/2024
 
 #include "geometry/BVH.h"
 #include <algorithm>
@@ -213,6 +214,7 @@ BVHBase::intersect(const Ray3f& ray) const
 
     stack.pop();
     if (node->intersect(r))
+    {
       if (!node->isLeaf())
       {
         stack.push(node->children[0]);
@@ -220,6 +222,7 @@ BVHBase::intersect(const Ray3f& ray) const
       }
       else if (intersectLeaf(node->first, node->count, ray))
         return true;
+    }
   }
   return false;
 }
@@ -240,6 +243,7 @@ BVHBase::intersect(const Ray3f& ray, Intersection& hit) const
 
     stack.pop();
     if (node->intersect(r))
+    {
       if (node->isLeaf())
         intersectLeaf(node->first, node->count, ray, hit);
       else
@@ -247,6 +251,7 @@ BVHBase::intersect(const Ray3f& ray, Intersection& hit) const
         stack.push(node->children[0]);
         stack.push(node->children[1]);
       }
+    }
   }
   return hit.object != nullptr;
 }
