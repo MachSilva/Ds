@@ -69,7 +69,7 @@ if(MSVC)
 else()
     find_package(glfw3 REQUIRED)
     include_directories(${glfw3_INCLUDE_DIRS})
-    target_compile_options(cg -Wno-narrowing)
+    target_compile_options(cg PRIVATE -Wno-narrowing)
     target_link_libraries(cg dl glfw)
 endif()
 
