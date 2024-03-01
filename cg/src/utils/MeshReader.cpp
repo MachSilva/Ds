@@ -27,9 +27,8 @@
 // ========
 // Source file for OBJ mesh reader.
 //
-// Author: Paulo Pagliosa
-// Modified by: Felipe Machado
-// Last revision: 17/07/2023
+// Author: Paulo Pagliosa (and contributors)
+// Altered version last revision: 29/02/2024
 
 #include "utils/MeshReader.h"
 #include <cstring>
@@ -212,7 +211,7 @@ readMeshData(std::fstream& file, TriangleMesh::Data& data)
           readInt3(file, 1, v, t, n);
           triangle->v[2] = v - 1;
           triangle++;
-          while (readInt3(file, 1, v, t, n) > 0)
+          while (readInt3(file, 1, v, t, n))
           {
             triangle->v[0] = triangle[-1].v[0];
             triangle->v[1] = triangle[-1].v[2];

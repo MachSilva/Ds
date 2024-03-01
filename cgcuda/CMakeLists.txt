@@ -1,7 +1,3 @@
-cmake_minimum_required(VERSION 3.16)
-
-project(cgcuda)
-
 add_library(cgcuda STATIC
     src/CUDAHelper.cpp
 )

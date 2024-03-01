@@ -1,12 +1,8 @@
-cmake_minimum_required(VERSION 3.16)
-
-project(cg VERSION 1.0)
-
 if(POLICY CMP0072)
     cmake_policy(SET CMP0072 NEW) # Use vendor neutral OpenGL library.
 endif()
 
-add_library(${PROJECT_NAME} STATIC
+add_library(cg STATIC
     externals/src/gl3w.c
     externals/src/imgui_draw.cpp
     externals/src/imgui_impl_glfw.cpp
@@ -69,18 +65,24 @@ include_directories(${OpenGL_INCLUDE_DIRS})
 
 if(MSVC)
     find_library(glfw3_LIB glfw3 ${CMAKE_CURRENT_LIST_DIR}/externals/lib)
-    target_link_libraries(${PROJECT_NAME} ${glfw3_LIB})
+    target_link_libraries(cg ${glfw3_LIB})
 else()
-    add_compile_options(-Wno-narrowing)
     find_package(glfw3 REQUIRED)
     include_directories(${glfw3_INCLUDE_DIRS})
-    target_link_libraries(${PROJECT_NAME} dl glfw)
+    target_compile_options(cg -Wno-narrowing)
+    target_link_libraries(cg dl glfw)
 endif()
 
-target_include_directories(${PROJECT_NAME}
+target_include_directories(cg
     PUBLIC
-        ${PROJECT_SOURCE_DIR}/include/
-        ${PROJECT_SOURCE_DIR}/externals/include/
+        ${CMAKE_CURRENT_LIST_DIR}/include/
+        ${CMAKE_CURRENT_LIST_DIR}/externals/include/
 )
 
-target_link_libraries(${PROJECT_NAME} OpenGL::GL)
+target_link_libraries(cg OpenGL::GL)
+
+if(USE_CUDA)
+    # Preprocessor definition _USE_CUDA must be propagated
+    target_compile_definitions(cg PUBLIC _USE_CUDA)
+    target_link_libraries(cg CUDA::cudart CUDA::cuda_driver)
+endif()

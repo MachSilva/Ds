@@ -1,15 +1,10 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.18)
+
+project(Ds VERSION 1.1 LANGUAGES CXX)
 
 option(USE_CUDA "Build projects with CUDA support" OFF)
 
-set(DS_LANGUAGES CXX)
-if(${USE_CUDA})
-  set(DS_LANGUAGES ${DS_LANGUAGES} CUDA)
-endif()
-
 message(STATUS "CUDA support: " ${USE_CUDA})
-
-project(Ds VERSION 1.1 LANGUAGES ${DS_LANGUAGES})
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
@@ -21,8 +16,10 @@ if(UNIX)
 endif()
 
 if(USE_CUDA)
-  add_definitions(-D_USE_CUDA)
-  include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+  enable_language(CUDA)
+  find_package(CUDAToolkit REQUIRED)
+  set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 
 # Projects where CUDA is optional

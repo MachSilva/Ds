@@ -1,8 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
-
-project(cgvis VERSION 1.0)
-
-add_library(${PROJECT_NAME} STATIC
+add_library(cgvis STATIC
     src/TriCellMesh.cpp
     src/CylinderSource.cpp
     src/PolyMeshBuilder.cpp
@@ -27,13 +23,13 @@ add_library(${PROJECT_NAME} STATIC
     src/PolyDataMapper.cpp
 )
 
-target_include_directories(${PROJECT_NAME}
+target_include_directories(cgvis
     PUBLIC
         ${PROJECT_SOURCE_DIR}/include/
 )
 
-target_link_libraries(${PROJECT_NAME} cg)
+target_link_libraries(cgvis cg)
 
-set_target_properties(${PROJECT_NAME} PROPERTIES
+set_target_properties(cgvis PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
 )
