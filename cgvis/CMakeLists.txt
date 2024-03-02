@@ -24,8 +24,7 @@ add_library(cgvis STATIC
 )
 
 target_include_directories(cgvis
-    PUBLIC
-        ${PROJECT_SOURCE_DIR}/include/
+    PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include/
 )
 
 target_link_libraries(cgvis cg)
