@@ -458,7 +458,10 @@ static const char* gFragmentShader = STRINGIFY(
 
   void main()
   {
-    fragmentColor = mixColor(shade(gPosition, normalize(gNormal)));
+    // `shade` subroutine disabled.
+    // For some reason I couldn't get this subroutine working
+    // on Nvidia cards, only on Intel ones.
+    fragmentColor = mixColor(pbr(gPosition, normalize(gNormal)));
   }
 );
 
@@ -523,12 +526,12 @@ GLRenderer::FragmentShader::FragmentShader(
   _mixColor.lineColorMixIdx = subroutineIndex("lineColorMix");
   _matProps.modelMaterialIdx = subroutineIndex("modelMaterial");
   _matProps.colorMapMaterialIdx = subroutineIndex("colorMapMaterial");
-  _shade.phongIdx = subroutineIndex("phong");
-  _shade.pbrIdx = subroutineIndex("pbr");
+  _shading.phongIdx = subroutineIndex("phong");
+  _shading.pbrIdx = subroutineIndex("pbr");
 
-  _mixColor.location = subroutineUniformLocation("mixColor");
-  _matProps.location = subroutineUniformLocation("matProps");
-  _shade.location = subroutineUniformLocation("shade");
+  _subroutines.shade = subroutineUniformLocation("shade");
+  _subroutines.mixColor = subroutineUniformLocation("mixColor");
+  _subroutines.matProps = subroutineUniformLocation("matProps");
 
   _samplers.sDiffuse.location = glGetUniformLocation(_handle, "sDiffuse");
   _samplers.sSpecular.location = glGetUniformLocation(_handle, "sSpecular");
@@ -912,18 +915,19 @@ void
 GLRenderer::defaultFragmentSubroutines()
 {
   auto fs = fragmentShader();
-  auto subIds = fs->subroutineUniforms();
+  auto ids = fs->subroutineUniforms();
+  auto& subroutines = fs->subroutineLocations();
   auto& mixColor = fs->mixColor();
   auto& matProps = fs->matProps();
-  auto& shade = fs->shade();
-  subIds[mixColor.location] = renderMode == RenderMode::HiddenLines
+  auto& shading = fs->shading();
+  ids[subroutines.shade] = shading.pbrIdx;
+  ids[subroutines.mixColor] = renderMode == RenderMode::HiddenLines
     ? mixColor.lineColorMixIdx
     : mixColor.noMixIdx;
-  subIds[matProps.location] = flags.isSet(UseVertexColors)
+  ids[subroutines.matProps] = flags.isSet(UseVertexColors)
     ? matProps.colorMapMaterialIdx
     : matProps.modelMaterialIdx;
-  subIds[shade.location] = shade.pbrIdx;
-  glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, subIds.size(), subIds.data());
+  glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, ids.size(), ids.data());
 }
 
 bool

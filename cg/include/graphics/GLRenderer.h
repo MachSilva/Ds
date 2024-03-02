@@ -514,9 +514,10 @@ public:
   FragmentShader(std::initializer_list<const char*> sources);
   ~FragmentShader() override;
 
+  const auto& subroutineLocations() const { return _subroutines; }
   const auto& mixColor() const { return _mixColor; }
   const auto& matProps() const { return _matProps; }
-  const auto& shade() const { return _shade; }
+  const auto& shading() const { return _shading; }
   const auto& samplers() const { return _samplers; }
 
   void set_sEnvironment(int textureUnit)
@@ -540,10 +541,16 @@ public:
   }
 
 protected:
+  struct SubroutineLocations
+  {
+    GLuint shade;
+    GLuint mixColor;
+    GLuint matProps;
+  } _subroutines;
+
   // `mixColor` subroutine type
   struct MixColorSRType
   {
-    GLuint location;
     GLuint noMixIdx;
     GLuint lineColorMixIdx;
   } _mixColor;
@@ -551,7 +558,6 @@ protected:
   // `matProps` subroutine type
   struct MatPropsSRType
   {
-    GLuint location;
     GLuint colorMapMaterialIdx;
     GLuint modelMaterialIdx;
   } _matProps;
@@ -559,10 +565,9 @@ protected:
   // `shading` subroutine type
   struct ShadingSRType
   {
-    GLuint location;
     GLuint phongIdx;
     GLuint pbrIdx;
-  } _shade;
+  } _shading;
 
   struct Samplers
   {
