@@ -665,7 +665,9 @@ GLRenderer::MeshPipeline::~MeshPipeline() { /* RAII */ }
 GLRenderer::GLRenderer(SceneBase& scene, Camera& camera):
   GLRendererBase{scene, camera}
 {
-  _pipelines[0] = _gl = new MeshPipeline();
+  _gl = new MeshPipeline();
+  _pipelines.reserve(16);
+  _pipelines[0] = {PipelineId::Mesh, _gl};
   _environmentProgram = new EnvironmentProgram();
 }
 
@@ -1024,10 +1026,14 @@ GLRenderer::drawAxes(const mat4f& m, float s)
 GLRenderer::Pipeline*
 GLRenderer::pipeline(uint64_t id) const
 {
-  auto it = _pipelines.find(id);
-  if (it == _pipelines.end())
-    return nullptr;
-  return it->second.get();
+  if (id == 0)
+    return _pipelines.front().second;
+
+  for (auto& [k, v] : _pipelines)
+    if (k == id)
+      return v;
+
+  return nullptr;
 }
 
 void
@@ -1036,11 +1042,20 @@ GLRenderer::setPipeline(uint64_t id, Pipeline* p)
   if (id == 0)
   {
     if (auto q = dynamic_cast<MeshPipeline*>(p))
-      _pipelines[0] = _gl = q;
+      _pipelines[0].second = _gl = q;
   }
   else
   {
-    _pipelines[id] = p;
+    for (auto& e : _pipelines)
+    {
+      if (e.first == id)
+      {
+        e.second = p;
+        return;
+      }
+    }
+    // if not found
+    _pipelines.push_back({id, p});
   }
 }
 

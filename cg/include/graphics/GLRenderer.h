@@ -231,36 +231,40 @@ protected:
 
 } // namespace GLSL
 
-template<std::size_t N>
-struct _string8_id
+constexpr uint64_t hash(std::string_view s) noexcept
 {
-  static_assert(N <= 8, "Your ID string must have at most 8 characters.");
-  constexpr _string8_id(const char s[N+1]) noexcept
+  uint64_t id = 0, k;
+  for (uint32_t i = 0; i < s.size(); i++)
   {
-    id = 0;
-    for (auto i = 0u; i < N; i++)
-      id |= uint64_t(s[i]) << (8*i);
+    id = (id << 8) + s[i];
+    k = id & 0xF000000000000000;
+    if (k)
+      id ^= k >> 48;
+    id &= ~k;
   }
+  return id;
+}
+
+template<std::size_t N>
+struct _pipeline_id
+{
   uint64_t id;
+  constexpr _pipeline_id(const char (&s)[N]) noexcept
+  {
+    id = hash(std::string_view(s,N));
+  }
 };
 
-#define REDEFINE_ID8(str8,value) template<> \
-  struct _pipeline_id<str8> { static constexpr const uint64_t id = value; };
+template<_pipeline_id S>
+constexpr uint64_t operator""_ID() noexcept { return S.id; }
 
-template<std::size_t N>
-_string8_id(const char (&s)[N]) -> _string8_id<N-1>;
+#define REDEFINE_PIPELINE_ID(s,value) template<> \
+  constexpr uint64_t operator""_ID<s>() noexcept { return value; };
 
-template<_string8_id S>
-struct _pipeline_id { static constexpr const auto id = S.id; };
-
-template<_string8_id S>
-constexpr uint64_t operator""_ID8() { return _pipeline_id<S>::id; }
-
-REDEFINE_ID8("Default",  0)
-REDEFINE_ID8("Mesh",     0)
-REDEFINE_ID8("Sphere",   0x01)
-REDEFINE_ID8("Surface",  0x02)
-REDEFINE_ID8("Particle", 0x03)
+REDEFINE_PIPELINE_ID("Mesh",     0)
+REDEFINE_PIPELINE_ID("Sphere",   1)
+REDEFINE_PIPELINE_ID("Surface",  2)
+REDEFINE_PIPELINE_ID("Particle", 3)
 
 //////////////////////////////////////////////////////////
 //
@@ -420,11 +424,11 @@ public:
 
   enum PipelineId : std::uint64_t
   {
-    Default  = "Default"_ID8,
-    Mesh     = "Mesh"_ID8,
-    Sphere   = "Sphere"_ID8,
-    Surface  = "Surface"_ID8,
-    Particle = "Particle"_ID8
+    Default  = 0,
+    Mesh     = "Mesh"_ID,
+    Sphere   = "Sphere"_ID,
+    Surface  = "Surface"_ID,
+    Particle = "Particle"_ID
   };
 
   Pipeline* pipeline(uint64_t id) const;
@@ -457,7 +461,7 @@ protected:
 
   void renderDefaultLights();
 
-  std::unordered_map<uint64_t,Reference<Pipeline>> _pipelines {0x10};
+  std::vector<std::pair<uint64_t,Reference<Pipeline>>> _pipelines;
   Reference<MeshPipeline> _gl; // Default pipeline. Listed in _pipelines[0].
   Reference<EnvironmentProgram> _environmentProgram {nullptr};
 
