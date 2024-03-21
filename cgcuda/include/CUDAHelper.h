@@ -48,8 +48,14 @@ void error(const char*, ...);
 void checkError(cudaError_t, const char*, int);
 void checkLastError(const char*, const char*, int);
 
-#define checkCudaError(err) cuda::checkError(err, __FILE__, __LINE__)
-#define checkLastCudaError(msg) cuda::checkLastError(msg, __FILE__, __LINE__)
+#ifndef NDEBUG
+# define CG_LOC __FILE__
+#else
+# define CG_LOC __func__
+#endif
+
+#define checkCudaError(err) cuda::checkError(err, CG_LOC, __LINE__)
+#define checkLastCudaError(msg) cuda::checkLastError(msg, CG_LOC, __LINE__)
 
 inline void
 reset()
