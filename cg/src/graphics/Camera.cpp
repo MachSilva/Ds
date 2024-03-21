@@ -475,10 +475,12 @@ Camera::zoom(float zoom)
 //[]---------------------------------------------------[]
 {
   if (zoom > 0)
+  {
     if (_projectionType == Perspective)
       setViewAngle(_viewAngle / zoom);
     else
       setHeight(_height / zoom);
+  }
 }
 
 void

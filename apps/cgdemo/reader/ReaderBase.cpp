@@ -390,10 +390,12 @@ void
 Reader::Parser::matchEndOfBlock()
 {
   if (_token != '}')
+  {
     if (_token == _EOF)
       error(CHAR_EXPECTED, '}');
     else
       error(UNEXPECTED_LEXEME, _lexeme.c_str());
+  }
   advance();
 }
 

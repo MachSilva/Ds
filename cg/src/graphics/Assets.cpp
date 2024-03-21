@@ -63,6 +63,7 @@ unmapUnusedMeshes(MeshMap& meshes)
 
   for (auto& [name, mesh] : meshes)
     if (mesh != nullptr)
+    {
       if (mesh->referenceCount() > 1)
         ms += meshSize(mesh);
       else
@@ -72,6 +73,7 @@ unmapUnusedMeshes(MeshMap& meshes)
 #endif // _DEBUG
         mesh = nullptr;
       }
+    }
   return ms;
 }
 
@@ -116,6 +118,7 @@ Assets::loadMesh(MeshMapIterator mit)
       auto s = meshSize(m);
 
       if (_meshSize + s > _maxMeshSize)
+      {
         // If unable to release any cached mesh, then delete
         // the last loaded mesh and return null
         if (auto ms = unmapUnusedMeshes(_meshes); ms != _meshSize)
@@ -125,6 +128,7 @@ Assets::loadMesh(MeshMapIterator mit)
           delete m;
           return nullptr;
         }
+      }
       _meshSize += s;
       _meshes[mit->first] = m;
     }

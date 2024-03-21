@@ -51,7 +51,7 @@ errorCallback(int error, const char* description)
   // See:
   // - https://github.com/glfw/glfw/issues/1121
   // - https://www.glfw.org/docs/latest/intro_guide.html#error_handling
-  runtimeError("[GLFW 0x%x] %s\n", error, description);
+  fprintf(stderr, "[GLFW 0x%x] %s\n", error, description);
 }
 
 inline auto

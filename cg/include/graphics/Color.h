@@ -27,9 +27,9 @@
 // ========
 // Class definition for RGB color.
 //
-// Author: Paulo Pagliosa
+// Author: Paulo Pagliosa (and contibutors)
 // Last revision: 08/09/2023
-// Altered version last revision: 14/10/2023
+// Altered version last revision: 05/03/2024
 
 #ifndef __Color_h
 #define __Color_h
@@ -148,10 +148,11 @@ public:
   HOST DEVICE
   void fromSRGB(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255)
   {
-    this->r = sRGB2Linear(float(r) * math::inverse<float>(255));
-    this->g = sRGB2Linear(float(g) * math::inverse<float>(255));
-    this->b = sRGB2Linear(float(b) * math::inverse<float>(255));
-    this->a = float(a) * math::inverse<float>(255);
+    constexpr auto inv = math::inverse<float>(255);
+    this->r = sRGB2Linear(float(r) * inv);
+    this->g = sRGB2Linear(float(g) * inv);
+    this->b = sRGB2Linear(float(b) * inv);
+    this->a = float(a) * inv;
   }
 
   /// Sets this object from v.
@@ -336,23 +337,30 @@ packColor(const Color& c)
 inline Color
 unpackColor(uint32_t c)
 {
-  auto r = ((c >> R_SHIFT) & 0xFF) * math::inverse<float>(255);
-  auto g = ((c >> G_SHIFT) & 0xFF) * math::inverse<float>(255);
-  auto b = ((c >> B_SHIFT) & 0xFF) * math::inverse<float>(255);
-  auto a = ((c >> A_SHIFT) & 0xFF) * math::inverse<float>(255);
+  constexpr auto inv = math::inverse<float>(255);
+  auto r = ((c >> R_SHIFT) & 0xFF) * inv;
+  auto g = ((c >> G_SHIFT) & 0xFF) * inv;
+  auto b = ((c >> B_SHIFT) & 0xFF) * inv;
+  auto a = ((c >> A_SHIFT) & 0xFF) * inv;
 
   return Color{r, g, b, a};
 }
 
 inline uint32_t
-pack_sRGB(const Color& c)
+pack_sRGB(float r, float g, float b, float a = 1.0f)
 {
   return packColor(
-    uint32_t(255 * Color::linear2sRGB(c.r)),
-    uint32_t(255 * Color::linear2sRGB(c.g)),
-    uint32_t(255 * Color::linear2sRGB(c.b)),
-    uint32_t(255 * c.a)
+    uint32_t(255 * Color::linear2sRGB(r)),
+    uint32_t(255 * Color::linear2sRGB(g)),
+    uint32_t(255 * Color::linear2sRGB(b)),
+    uint32_t(255 * a)
   );
+}
+
+inline uint32_t
+pack_sRGB(const Color& c)
+{
+  return pack_sRGB(c.r, c.g, c.b, c.a);
 }
 
 inline Color

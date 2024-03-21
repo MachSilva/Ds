@@ -252,7 +252,7 @@ static const char* gFragmentShader = STRINGIFY(
   }
 
   /**
-   * @brief Light to point vector.
+   * @brief Point to light vector.
    * 
    * @param i Light index in uniform block
    * @param P The point

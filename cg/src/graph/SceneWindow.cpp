@@ -100,6 +100,7 @@ SceneWindow::drawComponents(const SceneObject& object)
       }
     }
     else if (isCurrent)
+    {
       if (auto proxy = graph::asLight(c))
         editor->drawLight(*proxy->light());
       else if (auto proxy = graph::asCamera(c))
@@ -107,6 +108,7 @@ SceneWindow::drawComponents(const SceneObject& object)
         editor->drawCamera(*proxy->camera());
         preview(*proxy->camera());
       }
+    }
   }
 }
 
