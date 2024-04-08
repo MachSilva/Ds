@@ -317,12 +317,14 @@ operator *(real s, const Color& c)
 #define B_SHIFT 0x10u
 #define A_SHIFT 0x18u
 
-constexpr inline uint32_t
+HOST DEVICE
+constexpr uint32_t
 packColor(uint32_t r, uint32_t g, uint32_t b, uint32_t a = 255)
 {
   return a << A_SHIFT | b << B_SHIFT | g << G_SHIFT | r << R_SHIFT;
 }
 
+HOST DEVICE
 inline uint32_t
 packColor(const Color& c)
 {
@@ -334,6 +336,7 @@ packColor(const Color& c)
   return packColor(r, g, b, a);
 }
 
+HOST DEVICE
 inline Color
 unpackColor(uint32_t c)
 {
@@ -346,6 +349,7 @@ unpackColor(uint32_t c)
   return Color{r, g, b, a};
 }
 
+HOST DEVICE
 inline uint32_t
 pack_sRGB(float r, float g, float b, float a = 1.0f)
 {
@@ -357,12 +361,14 @@ pack_sRGB(float r, float g, float b, float a = 1.0f)
   );
 }
 
+HOST DEVICE
 inline uint32_t
 pack_sRGB(const Color& c)
 {
   return pack_sRGB(c.r, c.g, c.b, c.a);
 }
 
+HOST DEVICE
 inline Color
 unpack_sRGB(uint32_t c)
 {
