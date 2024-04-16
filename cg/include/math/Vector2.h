@@ -64,14 +64,14 @@ public:
 
   /// Default constructor.
   HOST DEVICE
-  Vector()
+  constexpr Vector()
   {
     // do nothing
   }
 
   /// Constructs a Vector2 object from (x, y).
   HOST DEVICE
-  Vector(real x, real y)
+  constexpr Vector(real x, real y)
   {
     set(x, y);
   }
