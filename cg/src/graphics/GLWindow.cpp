@@ -30,7 +30,7 @@
 // Author: Paulo Pagliosa
 // Last revision: 05/09/2023
 // Altered by: Felipe Machado
-// Altered version last revision: 04/07/2023
+// Altered version last revision: 22/04/2024
 
 #include "core/Exception.h"
 #include "graphics/Application.h"
@@ -182,8 +182,7 @@ GLWindow::mainLoop()
 
   while (!glfwWindowShouldClose(_window))
   {
-    // Pool and handle events.
-    glfwPollEvents();
+    _handleEvents();
     // Start the Dear ImGui frame.
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();

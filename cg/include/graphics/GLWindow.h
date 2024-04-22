@@ -27,8 +27,9 @@
 // ========
 // Class definition for OpenGL window.
 //
-// Author: Paulo Pagliosa
+// Author: Paulo Pagliosa (and contributors)
 // Last revision: 05/09/2023
+// Altered version last revision: 22/04/2024
 
 #ifndef __GLWindow_h
 #define __GLWindow_h
@@ -144,6 +145,11 @@ protected:
     return glfwGetKey(_window, key) == GLFW_PRESS;
   }
 
+  void setWaitForEvents(bool shouldWait)
+  {
+    _handleEvents = shouldWait ? glfwWaitEvents : glfwPollEvents;
+  }
+
   void shutdown()
   {
     glfwSetWindowShouldClose(_window, GL_TRUE);
@@ -158,6 +164,7 @@ private:
   float _deltaTime{};
   std::string _title;
   bool _paused{};
+  void (*_handleEvents)() = glfwPollEvents;
 
   void registerGlfwCallBacks();
   void centerWindow();
