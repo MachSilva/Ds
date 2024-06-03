@@ -36,6 +36,7 @@
 #include "graphics/Application.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include <thread>
 
 namespace cg
 { // begin namespace cg
@@ -182,7 +183,8 @@ GLWindow::mainLoop()
 
   while (!glfwWindowShouldClose(_window))
   {
-    _handleEvents();
+    // _handleEvents();
+    glfwWaitEventsTimeout(0.042);
     // Start the Dear ImGui frame.
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -193,6 +195,8 @@ GLWindow::mainLoop()
       update();
     else
     {
+      std::this_thread::sleep_for(std::chrono::milliseconds(42));
+      glfwWaitEvents();
       ImGui::OpenPopup("Paused");
       if (ImGui::BeginPopupModal("Paused",
         nullptr,
