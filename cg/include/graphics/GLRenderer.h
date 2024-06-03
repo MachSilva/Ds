@@ -119,6 +119,7 @@ struct MatrixBlock
   mat4f mvMatrix;
   mat4f mvpMatrix;
   mat3 normalMatrix;
+  mat3 cameraToWorldMatrix;
 };
 
 struct ConfigBlock

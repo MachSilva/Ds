@@ -96,6 +96,7 @@ const char* MATRIX_BLOCK_DECLARATION = STRINGIFY(
     mat4 mvMatrix;
     mat4 mvpMatrix;
     mat3 normalMatrix;
+    mat3 cameraToWorldMatrix;
   };
 );
 
@@ -113,6 +114,30 @@ const char* CONFIG_BLOCK_DECLARATION = STRINGIFY(
     int hasSpecularTexture;
     int hasMetalRoughTexture; // green: roughness; blue: metalness
   };
+);
+
+// Defines a sampler as follows:
+//    uniform sampler2D sEnvironment;
+const char* ENVIRONMENT_LIGHT_FUNCTION = STRINGIFY(
+  uniform sampler2D sEnvironment;
+
+  float inverseMix(float lower, float upper, float v)
+  {
+    return (v - lower) / (upper - lower);
+  }
+
+  vec3 environmentLight(vec3 V)
+  {
+    const float M_PI = 3.14159265358979323846;
+    float latitude = asin(-V.y);
+    // float longitude = sign(V.x) * acos(-V.z);
+    float longitude = atan(-V.z, V.x);
+    vec2 coords = vec2(
+      inverseMix(-M_PI, M_PI, longitude),
+      inverseMix(-M_PI / 2, M_PI / 2, latitude)
+    );
+    return texture(sEnvironment, coords).xyz;
+  }
 );
 
 } // namespace GLSL
@@ -356,43 +381,47 @@ static const char* gFragmentShader = STRINGIFY(
 
   float G1(float dotNX, float k)
   {
-    return dotNX / (dotNX * (1 - k) + k);
+    return dotNX / (dotNX * (1.0 - k) + k);
   }
 
   // Smith's geometry shadow-mask function
   float G(float dotNL, float dotNV, float r)
   {
     const float r1 = r + 1;
-    const float k = r1 * r1 * 0.125; // .125 = 1/8
+    const float k = r1 * r1 / 8;
     return G1(dotNL, k) * G1(dotNV, k);
   }
 
   // Microfacet normal distribution function
   float D(float dotNH, float r)
   {
-    dotNH = max(dotNH, 0);
-    float a2 = pow(max(r, 1e-3), 4); // a = r^2; a^2 = r^4
-    float d = dotNH * dotNH * (a2 - 1) + 1; // dot(H,N)^2 * (a^2 - 1) + 1
-    return a2 / (M_PI * d*d);
+    float a2 = pow(r, 4);
+    float nh2 = dotNH * dotNH;
+    float d = nh2 * (a2 - 1.0) + 1.0;
+    d = M_PI * d * d;
+    return a2 / d;
   }
 
   // Schlick's approximation for Fresnel reflectance for each wavelength
-  vec4 schlick(vec4 R0, float dotLH)
+  vec3 schlick(vec3 R0, float dotLH)
   {
-    return R0 + (vec4(1) - R0) * pow(1 - dotLH, 5);
+    return R0 + ((vec3(1) - R0) * pow(1 - dotLH, 5));
   }
 
-  vec4 BRDF(vec4 I, vec3 L, vec3 V, vec3 N, float dotNV, float dotNL,
-    MaterialProps m)
+  vec3 BRDF(vec3 L, vec3 V, vec3 N, float dotNV, float dotNL,
+    vec3 Od, vec3 Os, float metalness, float roughness)
   {
     vec3 H = normalize(L + V);
-    vec4 specular = (
-      schlick(m.Os, dot(L, H))
-      * G(dotNL, dotNV, m.roughness)
-      * D(dot(H, N), m.roughness)
-    ) / (4 * dotNL * dotNV);
-    vec4 diffuse = m.Od / M_PI; // Lambertian diffuse
-    return I * mix(diffuse, specular, m.metalness) * dotNL;
+    float microfacet =
+      G(dotNL, dotNV, roughness) * D(max(0, dot(H, N)), roughness);
+    microfacet /= (4 * dotNL * dotNV);
+    vec3 diffuse = Od / M_PI; // Lambertian diffuse
+    vec3 conductor_specular = schlick(Os, max(0, dot(L, H)));
+    vec3 dielectric_specular = schlick(vec3(0.04), max(0, dot(L, H)));
+    return dotNL * mix(
+      diffuse + (dielectric_specular * microfacet),
+      conductor_specular * microfacet,
+      metalness);
   }
 
   subroutine(shadingType)
@@ -402,7 +431,8 @@ static const char* gFragmentShader = STRINGIFY(
     vec4 color = vec4(0,0,0,1);
 
     matProps(m);
-    m.Os.xyz = max(m.Os.xyz, vec3(0.04));
+    const vec3 Od = m.Od.xyz;
+    const vec3 f0 = m.Os.xyz;
 
     // V = camera_pos - point; from point to camera
     vec3 V = - cameraToPoint(P);
@@ -425,11 +455,21 @@ static const char* gFragmentShader = STRINGIFY(
         if (dotNL > 1e-7) // Avoid division by zero.
         {
           vec4 I = lightColor(i, d);
-          color += BRDF(I, L, V, N, dotNV, dotNL, m);
+          color.xyz += I.xyz *
+            BRDF(L, V, N, dotNV, dotNL, Od, f0, m.metalness, m.roughness);
         }
       }
     }
-    return min(M_PI * color, vec4(1));
+  
+    if (hasEnvironmentTexture != 0)
+    {
+      vec3 L = reflect(-V, N);
+      vec3 I = environmentLight(cameraToWorldMatrix * L);
+      color.xyz += I * BRDF(L, V, N, dotNV, dotNV, Od, f0, m.metalness, m.roughness);
+    }
+
+    color.xyz *= M_PI;
+    return min(color, vec4(1));
   }
 
   subroutine(mixColorType)
@@ -492,26 +532,6 @@ static const char* gEnvFragment = STRINGIFY(
 
   layout(location = 0) out vec4 fragmentColor;
 
-  uniform sampler2D sEnvironment;
-
-  float inverseMix(float lower, float upper, float v)
-  {
-    return (v - lower) / (upper - lower);
-  }
-
-  const float M_PI = 3.14159265358979323846;
-  vec3 environmentLight(vec3 V)
-  {
-    float latitude = asin(-V.y);
-    // float longitude = sign(V.x) * acos(-V.z);
-    float longitude = atan(-V.z, V.x);
-    vec2 coords = vec2(
-      inverseMix(-M_PI, M_PI, longitude),
-      inverseMix(-M_PI / 2, M_PI / 2, latitude)
-    );
-    return texture(sEnvironment, coords).xyz;
-  }
-
   void main()
   {
     fragmentColor = vec4(environmentLight(normalize(vDirection)), 1);
@@ -533,12 +553,13 @@ GLRenderer::FragmentShader::FragmentShader(
   _subroutines.mixColor = subroutineUniformLocation("mixColor");
   _subroutines.matProps = subroutineUniformLocation("matProps");
 
+  _samplers.sEnvironment.location = glGetUniformLocation(_handle, "sEnvironment");
   _samplers.sDiffuse.location = glGetUniformLocation(_handle, "sDiffuse");
   _samplers.sSpecular.location = glGetUniformLocation(_handle, "sSpecular");
   _samplers.sMetalRough.location = glGetUniformLocation(_handle, "sMetalRough");
 
   glUseProgram(_handle);
-  // set_sEnvironment(0);
+  set_sEnvironment(0);
   set_sDiffuse(1);
   set_sSpecular(2);
   set_sMetalRough(3);
@@ -558,6 +579,7 @@ GLRenderer::EnvironmentProgram::EnvironmentProgram()
   });
   setShader(GL_FRAGMENT_SHADER, {
     GLSL::VERSION,
+    GLSL::ENVIRONMENT_LIGHT_FUNCTION,
     gEnvFragment
   });
 
@@ -636,7 +658,9 @@ GLRenderer::MeshPipeline::MeshPipeline()
     GLSL::VERSION,
     GLSL::PROPS_DECLARATIONS,
     GLSL::LIGHTING_BLOCK_DECLARATION,
+    GLSL::MATRIX_BLOCK_DECLARATION,
     GLSL::CONFIG_BLOCK_DECLARATION,
+    GLSL::ENVIRONMENT_LIGHT_FUNCTION,
     gFragmentShader
   });
 
@@ -972,6 +996,7 @@ GLRenderer::drawMesh(const TriangleMesh& mesh,
   b->mvMatrix = mvm;
   b->mvpMatrix = mvpMatrix(mvm, _camera);
   b->normalMatrix = normalMatrix(n, _camera);
+  b->cameraToWorldMatrix = mat3f{_camera->cameraToWorldMatrix()};
 
   glUnmapNamedBuffer(_gl->matrixBlock());
 
