@@ -70,6 +70,7 @@ const char* PROPS_DECLARATIONS = STRINGIFY(
     // PBR
     float metalness;
     float roughness;
+    float ior;
   };
 
   struct LineProps
@@ -83,9 +84,10 @@ const char* PROPS_DECLARATIONS = STRINGIFY(
 const char* LIGHTING_BLOCK_DECLARATION = STRINGIFY(
   layout(binding = 0, std140) uniform LightingBlock
   {
-    LightProps lights[8];
     vec4 ambientLight;
+    int hasEnvironmentTexture;
     int lightCount;
+    LightProps lights[8];
   };
 );
 
@@ -109,7 +111,6 @@ const char* CONFIG_BLOCK_DECLARATION = STRINGIFY(
     int projectionType; // PERSPECTIVE/PARALLEL
     //vec4 backFaceColor = vec4(1, 0, 1, 1);
     // Texture presence
-    int hasEnvironmentTexture;
     int hasDiffuseTexture;
     int hasSpecularTexture;
     int hasMetalRoughTexture; // green: roughness; blue: metalness
@@ -273,7 +274,7 @@ static const char* gFragmentShader = STRINGIFY(
     const float roughness = 0.9;
 
     m = MaterialProps(gColor * Oa, gColor * Od, vec4(1),
-      material.shine, metalness, roughness);
+      material.shine, metalness, roughness, 1.5);
   }
 
   /**
@@ -460,7 +461,7 @@ static const char* gFragmentShader = STRINGIFY(
         }
       }
     }
-  
+
     if (hasEnvironmentTexture != 0)
     {
       vec3 L = reflect(-V, N);
@@ -702,6 +703,7 @@ GLRenderer::renderDefaultLights()
 {
   GLSL::LightingBlock b;
 
+  b.hasEnvironmentTexture = 0;
   b.ambientLight = _scene->ambientLight;
   b.lights[0].type = 1; // POINT
   b.lights[0].color = vec4f{1, 1, 1, 0};
@@ -763,6 +765,7 @@ GLRenderer::renderLights()
     glMapNamedBuffer(_gl->lightingBlock(), GL_WRITE_ONLY));
 
   block->ambientLight = _scene->ambientLight;
+  block->hasEnvironmentTexture = _environmentTextureUnit < 0 ? 0 : 1;
 
   const auto& vm = _camera->worldToCameraMatrix();
   int nl{0};
@@ -910,7 +913,6 @@ GLRenderer::renderMaterial(const Material& material)
   // block->line.width = material.lineWidth;
   // block->line.color = material.lineColor;
 
-  block->hasEnvironmentTexture = _environmentTextureUnit < 0 ? 0 : 1;
   block->hasDiffuseTexture = 0;
   block->hasSpecularTexture = 0;
   block->hasMetalRoughTexture = 0;

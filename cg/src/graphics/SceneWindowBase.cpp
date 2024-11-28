@@ -609,18 +609,22 @@ SceneWindowBase::inspectLight(Light& light)
     light.setSpotAngle(angle);
 }
 
+static constexpr auto yesno(bool b) noexcept { return b ?  "Yes" : "No"; };
+
 void
 SceneWindowBase::inspectMaterial(Material& material)
 {
   ImGui::colorEdit3("Ambient", material.ambient);
   ImGui::colorEdit3("Diffuse", material.diffuse);
-  ImGui::colorEdit3("Spot", material.spot);
-  ImGui::DragFloat("Shine", &material.shine, 1, 1, 1000);
+  // ImGui::colorEdit3("Spot", material.spot);
+  // ImGui::DragFloat("Shine", &material.shine, 1, 1, 1000);
   ImGui::colorEdit3("Specular", material.specular);
   ImGui::colorEdit3("Transparency", material.transparency);
   ImGui::DragFloat("IOR", &material.ior, 0.01f, 1, 5);
   ImGui::DragFloat("Metalness", &material.metalness, 0.01f, 0, 1);
   ImGui::DragFloat("Roughness", &material.roughness, 0.01f, 0, 1);
+  ImGui::Text("Has base color texture? %s", yesno(material.texBaseColor));
+  ImGui::Text("Has metallic roughness texture? %s", yesno(material.texMetalRough));
 }
 
 } // end namespace cg

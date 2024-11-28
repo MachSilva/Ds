@@ -245,7 +245,7 @@ GLWindow::show(int argc, char** argv)
   // Create the GLFW window.
   glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
   glfwWindowHint(GLFW_SAMPLES, 8);
@@ -257,8 +257,8 @@ GLWindow::show(int argc, char** argv)
   glfwMakeContextCurrent(_window);
   glfwSwapInterval(1);
   gl3wInit();
-  if (!gl3wIsSupported(4, 3))
-    runtimeError("OpenGL 4.3 is not supported");
+  if (!gl3wIsSupported(4, 5))
+    runtimeError("OpenGL 4.5 is not supported");
   glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
   registerGlfwCallBacks();
   glfwGetFramebufferSize(_window, &framebufferWidth, &framebufferHeight);

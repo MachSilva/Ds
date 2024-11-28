@@ -91,11 +91,14 @@ struct alignas(16) MaterialProps
 {
   vec4f Oa; // ambient color
   vec4f Od; // diffuse color (Phong) or base color (PBR)
-  vec4f Os; // specular spot color
+  // specular spot color (Phong)
+  // or reflection coefficient (R_0) for light parallel to the normal (PBR)
+  vec4f Os;
   float shine; // specular shininess exponent
   // PBR
   float metalness; // [0,1]
   float roughness; // [0,1]
+  float ior; // index of refraction
 };
 
 struct alignas(16) LineProps
@@ -104,13 +107,14 @@ struct alignas(16) LineProps
   float width;
 };
 
-struct LightingBlock
+struct alignas(16) LightingBlock
 {
   static constexpr auto MAX_LIGHTS = 8U;
 
-  LightProps lights[MAX_LIGHTS];
-  alignas(16) vec4f ambientLight;
+  vec4f ambientLight;
+  int hasEnvironmentTexture;
   int lightCount;
+  LightProps lights[MAX_LIGHTS];
 };
 
 struct MatrixBlock
@@ -128,7 +132,6 @@ struct ConfigBlock
   LineProps line;
   int projectionType; // PERSPECTIVE/PARALLEL
   // Texture presence
-  int hasEnvironmentTexture;
   int hasDiffuseTexture;
   int hasSpecularTexture;
   int hasMetalRoughTexture; // green channel: metalness; blue channel: roughness

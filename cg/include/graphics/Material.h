@@ -50,14 +50,17 @@ class Material: public NameableObject
 {
 public:
   Color ambient; // ambient color
-  Color diffuse; // diffuse color
+  Color diffuse; // diffuse color (Phong) or base color (PBR)
   Color spot; // specular spot color
   float shine; // specular spot exponent
-  Color specular; // specular color
+  Color specular; // specular color (Phong) or reflection coefficient R_0 (PBR)
   Color transparency; // transparency color
   float ior; // index of refraction
   float roughness; // roughness [0,1]
   float metalness; // metalness [0,1]
+
+  unsigned int texBaseColor;
+  unsigned int texMetalRough; 
 
   static const Material* defaultMaterial();
 
@@ -66,9 +69,11 @@ public:
     diffuse{0.8f * color},
     shine{100},
     transparency{Color::black},
-    ior{1},
-    roughness{0.5},
-    metalness{0.5}
+    ior{1.5},
+    roughness{0.9},
+    metalness{0.1},
+    texBaseColor{0},
+    texMetalRough{0}
   {
     spot = specular = Color::white;
   }

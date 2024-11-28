@@ -278,7 +278,8 @@ SceneWindow::hierarchyWindow(const char* title)
   createObjectButton();
   ImGui::EndDisabled();
   ImGui::Separator();
-  if (treeNode(_scene.get(), ImGuiTreeNodeFlags_OpenOnArrow))
+  if (treeNode(_scene.get(),
+    ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen))
   {
     auto root = _scene->root();
 
@@ -308,11 +309,12 @@ SceneWindow::inspectTransform(Transform& transform)
 void
 SceneWindow::inspectComponent(Component& component)
 {
+  auto flags = ImGuiTreeNodeFlags_DefaultOpen;
   auto typeName = component.typeName();
   auto notDelete{true};
   auto open = editSceneObjects() && component.erasable() ?
-    ImGui::CollapsingHeader(typeName, &notDelete) :
-    ImGui::CollapsingHeader(typeName);
+    ImGui::CollapsingHeader(typeName, &notDelete, flags) :
+    ImGui::CollapsingHeader(typeName, flags);
 
   if (!notDelete)
     component.sceneObject()->removeComponent(typeName);
@@ -509,7 +511,7 @@ SceneWindow::inspectorWindow(const char* title)
 void
 SceneWindow::materialPanel()
 {
-  if (ImGui::CollapsingHeader("Materials"))
+  if (ImGui::CollapsingHeader("Materials", ImGuiTreeNodeFlags_DefaultOpen))
   {
     auto& materials = Assets::materials();
 
