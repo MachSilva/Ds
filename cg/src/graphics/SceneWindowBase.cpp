@@ -286,7 +286,7 @@ SceneWindowBase::preview(Camera& camera)
   }
   _fbo->disuse();
   ImGui::Begin("Preview", nullptr, ImGuiWindowFlags_NoResize);
-  ImGui::Image((void*)(intptr_t)_fbo->texture(), {wp, hp}, {0, 1}, {1, 0});
+  ImGui::Image((ImTextureID)_fbo->texture(), {wp, hp}, {0, 1}, {1, 0});
   ImGui::End();
 }
 
