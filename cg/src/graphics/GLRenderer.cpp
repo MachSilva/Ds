@@ -325,7 +325,7 @@ static const char* gFragmentShader = STRINGIFY(
     float range = lights[i].range;
     float f;
 
-    if (range == 0) // infinite range
+    if (range < 1e-7) // infinite range
     {
       f = 1 / d;
       if (falloff == 2) // quadratic falloff
@@ -691,7 +691,7 @@ GLRenderer::GLRenderer(SceneBase& scene, Camera& camera):
   GLRendererBase{scene, camera}
 {
   _gl = new MeshPipeline();
-  _pipelines.reserve(16);
+  _pipelines.resize(16);
   _pipelines[0] = {PipelineId::Mesh, _gl};
   _environmentProgram = new EnvironmentProgram();
 }
@@ -906,7 +906,7 @@ GLRenderer::renderMaterial(const Material& material)
 
   block->material.Oa = material.ambient;
   block->material.Od = material.diffuse;
-  block->material.Os = material.spot;
+  block->material.Os = material.specular;
   block->material.shine = material.shine;
   block->material.roughness = material.roughness;
   block->material.metalness = material.metalness;

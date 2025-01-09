@@ -189,7 +189,7 @@ GLWindow::mainLoop()
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    _deltaTime = 1000.0f / ImGui::GetIO().Framerate;
+    _deltaTime = ImGui::GetIO().DeltaTime;
     if (!_paused)
       // Update the scene.
       update();

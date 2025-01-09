@@ -155,6 +155,23 @@ protected:
     glfwSetWindowShouldClose(_window, GL_TRUE);
   }
 
+  void centerWindow();
+
+  void maximizeWindow()
+  {
+    glfwMaximizeWindow(_window);
+  }
+
+  void minimizeWindow()
+  {
+    glfwIconifyWindow(_window);
+  }
+
+  void restoreWindow()
+  {
+    glfwRestoreWindow(_window);
+  }
+
 private:
   GLFWwindow* _window{};
   char** _argv;
@@ -167,7 +184,6 @@ private:
   void (*_handleEvents)() = glfwPollEvents;
 
   void registerGlfwCallBacks();
-  void centerWindow();
   void mainLoop();
   void show(int, char**);
 
