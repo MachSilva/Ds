@@ -360,10 +360,10 @@ public:
   HOST DEVICE
   constexpr vec4& normalize(real eps = math::Limits<real>::eps())
   {
-    const auto len = length();
+    const auto s = squaredNorm();
 
-    if (!math::isZero(len, eps))
-      operator *=(math::inverse(len));
+    if (!math::isZero(s, eps*eps))
+      operator *=(math::rsqrt(s));
     return *this;
   }
 

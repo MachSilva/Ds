@@ -191,6 +191,17 @@ clamp(real x, real a, real b)
   return x < a ? a : (x > b ? b : x);
 }
 
+template<typename real>
+HOST DEVICE inline real
+rsqrt(real x) noexcept
+{
+#ifdef __CUDA_ARCH__
+  return ::rsqrt(x);
+#else
+  return inverse(sqrt(x));
+#endif
+}
+
 } // end namespace math::cg
 
 #endif // __Real_h

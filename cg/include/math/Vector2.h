@@ -37,6 +37,9 @@
 #include "math/Real.h"
 #include <concepts>
 #include <cstdio>
+#ifdef _USE_CUDA
+#include <cuda/std/cmath>
+#endif
 
 namespace cg
 { // begin namespace cg
@@ -323,10 +326,10 @@ public:
   HOST DEVICE
   constexpr auto& normalize(real eps = math::Limits<real>::eps())
   {
-    const auto len = length();
+    const auto s = squaredNorm();
 
-    if (!math::isZero(len, eps))
-      operator *=(math::inverse(len));
+    if (!math::isZero(s, eps*eps))
+      operator *=(math::rsqrt(s));
     return *this;
   }
 
