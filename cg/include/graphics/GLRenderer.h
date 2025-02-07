@@ -109,7 +109,7 @@ struct alignas(16) LineProps
 
 struct alignas(16) LightingBlock
 {
-  static constexpr auto MAX_LIGHTS = 8U;
+  static constexpr auto MAX_LIGHTS = 32U;
 
   vec4f ambientLight;
   int hasEnvironmentTexture;
