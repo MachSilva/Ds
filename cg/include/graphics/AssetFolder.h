@@ -169,8 +169,8 @@ private:
   template <typename T>
   static T* find(const RefSet<T>& set, const char* name)
   {
-    const T temp{name};
-    auto found = set.find(T::makeUse(&temp));
+    Reference<const T> temp = new T{name};
+    auto found = set.find(temp);
 
     return set.end() == found ? nullptr : *found;
   }
