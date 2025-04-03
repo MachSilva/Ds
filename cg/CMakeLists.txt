@@ -61,16 +61,17 @@ add_library(cg STATIC
 )
 
 find_package(OpenGL REQUIRED)
-include_directories(${OpenGL_INCLUDE_DIRS})
 
-if(MSVC)
+if(WIN32)
     find_library(glfw3_LIB glfw3 ${CMAKE_CURRENT_LIST_DIR}/externals/lib)
-    target_link_libraries(cg ${glfw3_LIB})
+    target_link_libraries(cg PUBLIC ${glfw3_LIB})
 else()
     find_package(glfw3 REQUIRED)
-    include_directories(${glfw3_INCLUDE_DIRS})
+    target_link_libraries(cg PUBLIC glfw)
+endif()
+
+if(NOT MSVC)
     target_compile_options(cg PRIVATE -Wno-narrowing)
-    target_link_libraries(cg dl glfw)
 endif()
 
 target_include_directories(cg
@@ -79,10 +80,10 @@ target_include_directories(cg
         ${CMAKE_CURRENT_LIST_DIR}/externals/include/
 )
 
-target_link_libraries(cg OpenGL::GL)
+target_link_libraries(cg PUBLIC OpenGL::GL)
 
 if(USE_CUDA)
     # Preprocessor definition _USE_CUDA must be propagated
     target_compile_definitions(cg PUBLIC _USE_CUDA)
-    target_link_libraries(cg CUDA::cudart CUDA::cuda_driver)
+    target_link_libraries(cg PUBLIC CUDA::cudart CUDA::cuda_driver)
 endif()

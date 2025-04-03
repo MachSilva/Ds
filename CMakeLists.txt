@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 
-project(Ds VERSION 1.1 LANGUAGES CXX)
+project(Ds VERSION 1.1 LANGUAGES C CXX)
 
 option(USE_CUDA "Build projects with CUDA support" OFF)
 
