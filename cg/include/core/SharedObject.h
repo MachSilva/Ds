@@ -29,6 +29,8 @@
 //
 // Author: Paulo Pagliosa
 // Last revision: 14/07/2023
+// Altered source version
+// Altered version last revision: 03/04/2025
 
 #ifndef __SharedObject_h
 #define __SharedObject_h
