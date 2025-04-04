@@ -101,7 +101,7 @@ public:
   HOST DEVICE
   auto& operator |=(Flags flags)
   {
-    _bits |= flags.bits;
+    _bits |= flags._bits;
     return *this;
   }
 
