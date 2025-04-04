@@ -29,6 +29,7 @@
 //
 // Author: Paulo Pagliosa
 // Last revision: 01/05/2024
+// Altered version last revision: 04/04/2025
 
 #ifndef __BVH_h
 #define __BVH_h
@@ -80,7 +81,24 @@ public:
   }
 
 protected:
-  class PrimitiveInfo;
+  class PrimitiveInfo
+  {
+  public:
+    uint32_t index;
+    Bounds3f bounds;
+    vec3f centroid;
+
+    PrimitiveInfo() = default;
+
+    PrimitiveInfo(uint32_t index, const Bounds3f& bounds):
+      index{index},
+      bounds{bounds},
+      centroid{bounds.center()}
+    {
+      // do nothing
+    }
+
+  }; // PrimitiveInfo
 
   using PrimitiveInfoArray = std::vector<PrimitiveInfo>;
   using IndexArray = std::vector<uint32_t>;
@@ -216,25 +234,6 @@ private:
   friend BVHBase;
 
 }; // BVHBase::NodeView
-
-class BVHBase::PrimitiveInfo
-{
-public:
-  uint32_t index;
-  Bounds3f bounds;
-  vec3f centroid;
-
-  PrimitiveInfo() = default;
-
-  PrimitiveInfo(uint32_t index, const Bounds3f& bounds):
-    index{index},
-    bounds{bounds},
-    centroid{bounds.center()}
-  {
-    // do nothing
-  }
-
-}; // BVHBase::PrimitiveInfo
 
 inline BVHBase::NodeView
 BVHBase::root() const

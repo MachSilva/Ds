@@ -48,7 +48,7 @@ template <typename DataSet, int32_t nv>
 class Cell: public virtual SharedObject
 {
 public:
-  constexpr auto vertexCount() const
+  auto vertexCount() const
   {
     return nv;
   }

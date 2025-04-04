@@ -29,6 +29,7 @@
 //
 // Author: Paulo Pagliosa
 // Last revision: 05/03/2024
+// Altered version last revision: 04/04/2025
 
 #ifndef __Flags_h
 #define __Flags_h
@@ -102,7 +103,7 @@ public:
   HOST DEVICE
   auto& operator |=(Flags flags)
   {
-    _bits |= flags.bits;
+    _bits |= flags._bits;
     return *this;
   }
 

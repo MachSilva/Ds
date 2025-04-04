@@ -28,10 +28,12 @@
 // Source file for camera proxy.
 //
 // Author: Paulo Pagliosa
-// Last revision: 22/01/2022
+// Modified by: Felipe Machado
+// Last revision: 17/03/2022
 
 #include "graph/CameraProxy.h"
 #include "graph/Transform.h"
+#include "graph/SceneObject.h"
 #include <cassert>
 
 namespace cg::graph
